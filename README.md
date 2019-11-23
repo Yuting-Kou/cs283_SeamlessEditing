@@ -4,7 +4,7 @@ Yuting Kou, Yizhou Wang
 ## Paper selection
 [Blend two different images without seams using poisson image editing.](https://www.cs.virginia.edu/~connelly/class/2014/comp_photo/proj2/poisson.pdf)
 
-This paper proposed an efficient and effective way of solving Poisson equations to achieve seamless editing. Given a properly-chosen guidance field  <img src="https://latex.codecogs.com/gif.latex?v" />, this paper solves Poisson equation to find best interpolant function <img src="https://latex.codecogs.com/gif.latex?f" /> which minimizes the error with guidance vector field around the corners. 
+This paper proposed a generic framework of guided interpolation to achieve seamless editing. Given a properly-chosen guidance field  <img src="https://latex.codecogs.com/gif.latex?v" />, this paper solves Poisson equation to find best interpolant function <img src="https://latex.codecogs.com/gif.latex?f" /> which minimizes the error with guidance vector field around the corners. 
 
 <img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega&space;|\nabla&space;f-v|^2&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\min_f\int\int_\Omega |\nabla f-v|^2 \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
 <img src="https://latex.codecogs.com/gif.latex?\Leftrightarrow\Delta&space;f=\text{div}&space;v&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\Leftrightarrow\Delta f=\text{div} v \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
