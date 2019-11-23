@@ -11,10 +11,13 @@ This paper proposed an efficient and effective way of solving Poisson equations 
 
 By choosing different guidance field, we can achieve different functional tools for seamless editing:
 - Seamless cloning: (related to source img: merge two img)
-    - <img src="https://latex.codecogs.com/gif.latex?v=\nabla&space;g" title="v=\nabla g" /> :insert source picture <img src="https://latex.codecogs.com/gif.latex?g"/> into destination picture <img src="https://latex.codecogs.com/gif.latex?f^*" />.
-    - <img src="https://latex.codecogs.com/gif.latex?v=\begin{cases}\nabla&space;f^*(x)&space;&&space;\text{if}&space;|\nabla&space;f^*(x)|>|\nabla&space;g(x)|\\\nabla&space;g(x)&&space;\text{otherwise}\end{cases}" title="v=\begin{cases}\nabla f^*(x) & \text{if} |\nabla f^*(x)|>|\nabla g(x)|\\\nabla g(x)& \text{otherwise}\end{cases}" />: insert objects with holes/ partially transparent objects on top of some textured background.
+    - <img src="https://latex.codecogs.com/gif.latex?v=\nabla&space;g" title="v=\nabla g" /> : insert source picture <img src="https://latex.codecogs.com/gif.latex?g"/> into destination picture <img src="https://latex.codecogs.com/gif.latex?f^*" />.
+    - <img src="https://latex.codecogs.com/gif.latex?v=\begin{cases}\nabla&space;f^*(x)&space;&&space;\text{if}&space;|\nabla&space;f^*(x)|>|\nabla&space;g(x)|\\\nabla&space;g(x)&&space;\text{otherwise}\end{cases}" title="v=\begin{cases}\nabla f^*(x) & \text{if} |\nabla f^*(x)|>|\nabla g(x)|\\\nabla g(x)& \text{otherwise}\end{cases}" />: insert objects with holes or partially transparent objects on top of some textured background.
 - Selecting editing: (related to destination img: in-place img transformation)
-
+    - <img src="https://latex.codecogs.com/gif.latex?v&space;=&space;M(x)\nabla&space;f^*(x)" title="v = M(x)\nabla f^*(x)" /> : texture flattening: apply a sparse matrix filter over gradient of destination image.
+    - local illumination changes: apply non-linear transformation (e.g. log) to the gradient field, then integrating back with a Poisson solver.
+    - local color change: set destination image to greyscale, solve Poisson equation.
+    - seamless tilting: set periodic boundary values on the borader of a rectangular region before integrating with Poisson solver.
 ## Research Schedule
 ### Paper extension
 In this paper, a variety of novel tools are introduced for the seamless editing of image regions, using generic interpolation machinery based on solving Poisson equations. Here we propose several possible extensions. During our research process, we may implement some or all of these ideas based on the feasibility.
