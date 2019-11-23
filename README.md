@@ -4,18 +4,17 @@ Yuting Kou, Yizhou Wang
 ## Paper selection
 [Blend two different images without seams using poisson image editing.](https://www.cs.virginia.edu/~connelly/class/2014/comp_photo/proj2/poisson.pdf)
 
-This paper proposed an efficient and effective way of solving Poisson equations to achieve seamless editing. Given a properly-chosen guidance field  <img src="https://latex.codecogs.com/gif.latex?v" />, this paper solves Poisson equation to find best interpolant function <img src="https://latex.codecogs.com/gif.latex?f" /> which minimizes the error with guidence vector field around the corners. 
+This paper proposed an efficient and effective way of solving Poisson equations to achieve seamless editing. Given a properly-chosen guidance field  <img src="https://latex.codecogs.com/gif.latex?v" />, this paper solves Poisson equation to find best interpolant function <img src="https://latex.codecogs.com/gif.latex?f" /> which minimizes the error with guidance vector field around the corners. 
 
-<img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega |\nabla f-v|^2 w.t. f|_{\partial \Omega}=f^*|_\partial \Omega"/>  
+<img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega |\nabla f-v|^2 w.t. f|_{\partial \Omega}=f^*|_\partial \Omega" />  
 
-<img src="https://latex.codecogs.com/gif.latex?\Leftrightarrow\Deltaf=\text{div} v w.t. f|_{\partial \Omega}=f^*|_\partial \Omega"/>
+<img src="https://latex.codecogs.com/gif.latex?\Leftrightarrow\Deltaf=\text{div} v w.t. f|_{\partial \Omega}=f^*|_\partial \Omega" />
 
 By choosing different guidance field, we can achieve different functional tools for seamless editing:
 - Seamless cloning: (related to source img: merge two img)
-    - <img src="https://latex.codecogs.com/gif.latex?v=\nabla g"/> :insert source picture <img src="https://latex.codecogs.com/gif.latex? g"/> into destination picture <img src="https://latex.codecogs.com/gif.latex?f^*"/>.
+    - <img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega&space;|\nabla&space;f-v|^2&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\min_f\int\int_\Omega |\nabla f-v|^2 \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
     - <img src="https://latex.codecogs.com/gif.latex?v=\begin{cases}\nabla f^*(x) & \text{if} |\nabla f^*(x)|>|\nabla g(x)|\\\nabla g(x)& \text{otherwise}\end{cases}"/>: insert objects with holes/ partially transparent objects on top of some textured background.
 - Selecting editing: (related to destination img: in-place img transformation)
-
 
 ## Research Schedule
 ### Paper extension
