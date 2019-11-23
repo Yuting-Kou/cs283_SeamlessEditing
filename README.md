@@ -6,7 +6,8 @@ Yuting Kou, Yizhou Wang
 
 This paper proposed an efficient and effective way of solving Poisson equations to achieve seamless editing. Given a properly-chosen guidance field  <img src="https://latex.codecogs.com/gif.latex?v" />, this paper solves Poisson equation to find best interpolant function <img src="https://latex.codecogs.com/gif.latex?f" /> which minimizes the error with guidance vector field around the corners. 
 
-<img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega&space;|\nabla&space;f-v|^2&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega&space;\quad&space;\Leftrightarrow\Delta&space;f=\text{div}&space;v&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\Leftrightarrow\Delta f=\text{div} v \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
+<img src="https://latex.codecogs.com/gif.latex?\min_f\int\int_\Omega&space;|\nabla&space;f-v|^2&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\min_f\int\int_\Omega |\nabla f-v|^2 \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
+<img src="https://latex.codecogs.com/gif.latex?\Leftrightarrow\Delta&space;f=\text{div}&space;v&space;\text{&space;with&space;}&space;f|_{\partial&space;\Omega}=f^*|_\partial&space;\Omega" title="\Leftrightarrow\Delta f=\text{div} v \text{ with } f|_{\partial \Omega}=f^*|_\partial \Omega" />
 
 By choosing different guidance field, we can achieve different functional tools for seamless editing:
 - Seamless cloning: (related to source img: merge two img)
