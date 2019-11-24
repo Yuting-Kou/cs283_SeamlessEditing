@@ -19,7 +19,7 @@ class Gradient_Field:
         :param offset=[tx,ty], where output = [x+tx, y+ty]
         """
         M = np.float32([[1, 0, offset[0]], [0, 1, offset[2]]])
-        return cv2.warp
+        return cv2.warpAffine(source, M, (output_size[0], output_size[1]))
 
     def __init__(self, source, destination, mask, offset=[0, 0]):
         """
