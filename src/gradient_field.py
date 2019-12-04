@@ -21,7 +21,7 @@ class Gradient_Field:
         M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
         return cv2.warpAffine(source, M, (output_size[0], output_size[1]))
 
-    def __init__(self, source, destination, mask, offset=[0, 0]):
+    def __init__(self, source, destination, mask, offset=[0, 0], neighbor_def=[[0, 1, 0], [1, 0, 1], [0, 1, 0]]):
         """
         create a gradient field instance
         :param source: source image g which is the pixel function within the selected area.
@@ -30,11 +30,14 @@ class Gradient_Field:
         :param destination: destination image f* which is the pixel function outside of the selected area.
         :param mask: corresponds to the region of source image that will be copied and
         be placed into the desired location in destination img. It has same shapes as destination image f*.
+        :param neighbor_def: default is 4-connected neighbors. One can also set as np.ones((3,3)) which is 8-neighbors.
+                Used to detect the boundary.
         """
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
         self.mask = mask
+        self.boundary = cv2.dilate(src=self.mask, kernel=neighbor_def) - test.mask
         self.method_list = [["dg", "import gradients", "basic seamless cloning"],
                             ["dgf", "mixing gradients", "transparent seamless cloning"],
                             ["Mdf", "masked gradients", "texture flattening"],
@@ -96,5 +99,5 @@ if __name__ == '__main__':
     destination = plt.imread(r'../test/kyt.jpg')
     print(source.shape, destination.shape)
 
-    test = Gradient_Field(source=source, destination=destination, mask=np.ones_like(destination))
+    test = Gradient_Field(source=source, destination=destination, mask=np.zeros(destination.shape[:2]))
     test.get_v()
