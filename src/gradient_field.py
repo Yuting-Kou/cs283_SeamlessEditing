@@ -1,5 +1,5 @@
-import numpy as np
 import cv2
+import numpy as np
 
 
 class Gradient_Field:
@@ -13,12 +13,12 @@ class Gradient_Field:
     @staticmethod
     def _affine_transform(Iin, output_size, offset):
         """
-        transform image (source img) into the output_size(destination) withh offset
+        transform image (source img) into the output_size(destination) with offset
         :param Iin: source img
         :param output_size: output size
         :param offset=[tx,ty], where output = [x+tx, y+ty]
         """
-        M = np.float32([[1, 0, offset[0]], [0, 1, offset[2]]])
+        M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
         return cv2.warpAffine(source, M, (output_size[0], output_size[1]))
 
     def __init__(self, source, destination, mask, offset=[0, 0]):
@@ -43,6 +43,7 @@ class Gradient_Field:
         self.v = None
 
     def print_methods(self):
+        """helper function, print methods"""
         return self.method_list
 
     def get_v(self, method="dg"):
@@ -95,5 +96,5 @@ if __name__ == '__main__':
     destination = plt.imread(r'../test/kyt.jpg')
     print(source.shape, destination.shape)
 
-    test = Gradient_Field(source=source, destination=destination)
+    test = Gradient_Field(source=source, destination=destination, mask=np.ones_like(destination))
     test.get_v()
