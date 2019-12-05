@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from scipy.signal import correlate2d
+from scipy.sparse import diags
 
 
 class Gradient_Field:
@@ -20,7 +21,7 @@ class Gradient_Field:
         :param offset=[tx,ty], where output = [x+tx, y+ty]
         """
         M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
-        return cv2.warpAffine(source, M, (output_size[0], output_size[1]))
+        return cv2.warpAffine(Iin, M, (output_size[1], output_size[0]))
 
     def __init__(self, source, destination, mask, offset=[0, 0], neighbor_ker=4):
         """
@@ -36,21 +37,22 @@ class Gradient_Field:
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
-        self.mask = mask
+        self.mask = mask.astype(np.uint8)
+        print('mask value set:',np.unique(self.mask))
 
         # neighbor
-        if len(neighbor_ker) < 2:
+        if isinstance(neighbor_ker, int):
             assert (neighbor_ker == 4) or (neighbor_ker) == 8
             if neighbor_ker == 4:
-                self.neighbor_ker = [[0, 1, 0], [1, 0, 1], [0, 1, 0]]
+                self.neighbor_ker = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
             else:
-                self.neighbor_ker = np.ones((3, 3))
+                self.neighbor_ker = np.ones((3, 3), dtype=np.uint8)
         else:
             assert neighbor_ker.shape == (3, 3)
-            self.neighbor_ker = neighbor_ker
+            self.neighbor_ker = np.array(neighbor_ker, dtype=np.uint8)
         self.neighbor_ker[1, 1] = 0  # not include itself.
-        self.Np = correlate2d(np.ones(self.mask.shape), self.neighbor_ker, mode='same')  # 2d
-        self.boundary = cv2.dilate(src=self.mask, kernel=self.neighbor_ker) - test.mask
+        self.Np = correlate2d(np.ones(self.mask.shape, dtype=np.uint8), self.neighbor_ker, mode='same')  # 2d
+        self.boundary = cv2.dilate(src=self.mask, kernel=self.neighbor_ker) - self.mask
         self.method_list = [["dg", "import gradients", "basic seamless cloning"],
                             ["dgf", "mixing gradients", "transparent seamless cloning"],
                             ["Mdf", "masked gradients", "texture flattening"],
@@ -59,12 +61,28 @@ class Gradient_Field:
 
         # calculate b1: sum of f_star(q) where q is at boundary;
         if len(self.g.shape) == 3:
-            self.b1 = correlate2d(self.f_star * self.boundary[:, :, np.newaxis], self.neighbor_ker, mode='same')
+            self.b1 = [
+                correlate2d(self.f_star[:, :, i] * self.boundary, self.neighbor_ker, mode='same')
+                for i in range(self.f_star.shape[2])]
         else:
             self.b1 = correlate2d(self.f_star * self.boundary, self.neighbor_ker, mode='same')
 
-        # calculate A
+        # calculate A: same value for all the channels. Use row-wise flatten.
+        a2 = self.mask.flatten()
+        m, n = self.g.shape[:2]
+        klists = np.array([-n - 1, -n, -n + 1, -1, 0, 1, n - 1, n, n + 1])
 
+        self.A = diags(self.Np.flatten())
+        for k in klists[self.neighbor_ker.flatten() == 1]:
+            val = np.zeros(int(m * n))
+            if k > 0:
+                z = np.r_[a2[k:], np.zeros(k)]
+                val[z == 1] = -1
+                self.A.setdiag(val, k=k)
+            else:
+                z = np.r_[np.zeros(-k), a2[:k]]
+                val[z == 1] = -1
+                self.A.setdiag(val[-k:], k=k)
 
     def print_methods(self):
         """helper function, print methods"""
@@ -94,17 +112,22 @@ class Gradient_Field:
                 raise ValueError(
                     "Not defined guidance vector methods. Please select from {}".format(self.print_methods()))
         # already calculated
+        assert (self.A is not None) and (self.b is not None)
         return self.A, self.b
 
     def _import_gradients(self):
         """ v=grad g"""
         self.cur_method = self.method_list[0]
+        print('Importing gradients: v=dg')
         # b2 sum of gradient vector: g_p - g_q. q is neighbor
         if len(self.g.shape) == 3:
-            b2 = self.Np[:, :, np.newaxis] * self.g - correlate2d(self.g, self.neighbor_ker, mode='same')
+            self.b = np.array([(self.b1[i] + self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neighbor_ker,
+                                                                   mode='same')).flatten()
+                           for i in range(self.g.shape[2])])
+
         else:
             b2 = self.Np * self.g - correlate2d(self.g, self.neighbor_ker, mode='same')
-        self.b = self.b1 + b2
+            self.b = (self.b+b2).flatten()
 
 
     def _mixing_gradients(self):
@@ -127,5 +150,15 @@ if __name__ == '__main__':
     destination = plt.imread(r'../test/kyt.jpg')
     print(source.shape, destination.shape)
 
-    test = Gradient_Field(source=source, destination=destination, mask=np.zeros(destination.shape[:2]))
-    test.get_v()
+    ker = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
+    mask = np.zeros(destination.shape[:2], np.uint8)
+    mask[500:-500, 500:-500] = 1
+    test = Gradient_Field(source=source, destination=destination, mask=mask)
+
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    plt.imshow(test.g)
+    plt.subplot(1, 2, 2)
+    plt.imshow(test.f_star)
+    plt.show()
+    A,b = test.get_v()
