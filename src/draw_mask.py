@@ -21,7 +21,7 @@ class MaskPainter():
         self.size = 5
         self.image_rest = self.image.copy()
         self.mask_reset = self.mask.copy()
-        self.window_name = "Draw mask:   s-save; r:reset; q:quit; +:larger painter; -:smaller painter"
+        self.window_name = "Draw mask:   s-save; r:reset; q:quit; l:larger painter; m:smaller painter"
 
     def _paint(self, event, x, y, flags, param):
         # click and draw
@@ -45,7 +45,13 @@ class MaskPainter():
             cv2.imshow(self.window_name, self.image)
             key = cv2.waitKey(1) & 0xFF
 
-            if (key == ord("r")) or (key == ord("R")):
+            if (key == ord("l")) or (key == ord("L")):  # up or plus
+                self.size += 1
+                # print("larger", self.size)
+            elif (key == "m") or (key == ord("M")):
+                self.size -= 1
+                # print("smaller", self.size)
+            elif (key == ord("r")) or (key == ord("R")):
                 self.image = self.image_rest.copy()
                 self.mask = self.mask_reset.copy()
 
@@ -55,10 +61,6 @@ class MaskPainter():
             elif key == ord("q"):
                 cv2.destroyAllWindows()
                 exit()
-            elif key == ord("+"):
-                self.size += 1
-            elif key == ord("-"):
-                self.size -= 1
 
         roi = self.mask
         cv2.imshow("Press any key to save the mask", roi)
@@ -75,13 +77,13 @@ class MaskPainter():
 
 if __name__ == '__main__':
 
-    source_path = r'../test/kyt.jpg'
-
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--image", required=True, help="Path to the image")
     ap.add_argument("-s", "--save", required=False, help="mask name to save")
     args = vars(ap.parse_args())
 
     mp = MaskPainter(args["image"])
-    if "save" in args:
+    if args["save"] is not None:
         print('save mask in ', mp.paint_mask(maskname=args["save"]))
+    else:
+        print('save mask in ', mp.paint_mask())
