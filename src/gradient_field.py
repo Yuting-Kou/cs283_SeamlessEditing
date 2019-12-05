@@ -192,7 +192,7 @@ class Gradient_Field:
                 bval[~self.mask.ravel()] = self.f_star.ravel()[~self.mask.ravel()]
                 self.b = bval
 
-    def _masked_gradients(self, new_mask):
+    def _masked_gradients(self, new_mask, g_eq_f=True):
         """
         The gradient is only passed through a sparse sieve that retains only the most salient features
         If g = f_star, it can realize in-place image transformations.
@@ -200,12 +200,13 @@ class Gradient_Field:
         """
         self.cur_method = self.method_list[2]
         print('Salient mask gradient: v=M*dg')
-        assert new_mask.shape[:2] == self.g.shape[:2]
+        target = self.f_star if g_eq_f else self.g
+        assert new_mask.shape[:2] == target.shape[:2]
         new_mask = new_mask.astype(bool)
-        if len(self.g.shape) == 3:
+        if len(target.shape) == 3:
             self.b = []
-            for i in range(self.g.shape[2]):
-                grad = self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neigh_ker, mode='same')
+            for i in range(target.shape[2]):
+                grad = self.Np * target[:, :, i] - correlate2d(target[:, :, i], self.neigh_ker, mode='same')
                 mask = new_mask[:, :, i] if len(new_mask.shape) == 3 else new_mask
                 bval = (self.b1[i] + mask * grad).ravel()
                 f_star = self.f_star[:, :, i].ravel() if len(self.f_star.shape) == 3 else self.f_star.ravel()
@@ -213,8 +214,8 @@ class Gradient_Field:
                 self.b.append(bval)
             self.b = np.array(self.b)
         else:
-            assert new_mask.shape == self.g.shape
-            grad = self.Np * self.g - correlate2d(self.g, self.neigh_ker, mode='same')
+            assert new_mask.shape == target.shape
+            grad = self.Np * target - correlate2d(target, self.neigh_ker, mode='same')
             b_val = (self.b1 + new_mask * grad).ravel()
             # outside the region
             if len(self.f_star.shape) == 3:
