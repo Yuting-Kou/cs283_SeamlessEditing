@@ -9,9 +9,11 @@ class MaskMover():
     def __init__(self, image_path, mask_path):
         self.image_path, self.mask_path = image_path, mask_path
         self.image = cv2.imread(image_path)
+        assert self.image is not None
         self.image_copy = self.image.copy()
 
         self.original_mask = cv2.imread(mask_path)
+        assert self.original_mask is not None
         self.original_mask_copy = np.zeros(self.image.shape)
         self.original_mask_copy[np.where(self.original_mask != 0)] = 255
 
@@ -99,6 +101,9 @@ if __name__ == '__main__':
     args = vars(ap.parse_args())
 
     mm = MaskMover(args["image"], args["mask"])
-    offset_x, offset_y, _ = mm.move_mask(maskname=args["save"])
+    if args["save"] is None:
+        offset_x, offset_y, _ = mm.move_mask()
+    else:
+        offset_x, offset_y, _ = mm.move_mask(maskname=args["save"])
 
     print(offset_x, offset_y)
