@@ -21,7 +21,7 @@ if __name__ == '__main__':
     mask[mask != 1] = 0
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty])
+    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty], neighbor_ker=4)
                           #neighbor_ker=np.ones((5, 5)))
 
     print('Choose methods from:', test.print_methods())

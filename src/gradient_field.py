@@ -24,6 +24,48 @@ class Gradient_Field:
         M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
         return cv2.warpAffine(Iin, M, (output_size[1], output_size[0]))
 
+    def _calA(self):
+        # calculate A: same value for all the channels. Use row-wise flatten.
+        a2 = self.mask.ravel()
+        m, n = self.g.shape[:2]
+        klists = []
+        K = self.neigh_ker.shape[0]
+        mid = K // 2
+        for i in range(K):
+            for j in range(K):
+                klists.append((i - mid) * n + (j - mid))
+
+        # A is still the full matrix. but outside the region A is Identity matrix
+        # diag_val = self.Np.flatten()
+        # diag_val[~self.mask.ravel()] = 1
+        # self.A = diags(diag_val)
+        # we want submatrix A.
+        A = diags(self.Np.flatten())
+        for k in np.array(klists)[self.neigh_ker.ravel() == 1]:
+            val = np.zeros(n * m)
+            if k > 0:
+                z = np.r_[a2[k:], np.zeros(k)]
+                # z[~self.mask.ravel()] = 0
+                val[z == 1] = -1
+                A.setdiag(val, k=k)
+            else:
+                z = np.r_[np.zeros(-k), a2[:k]]
+                # z[~self.mask.ravel()] = 0
+                val[z == 1] = -1
+                A.setdiag(val[-k:], k=k)
+        print(A.shape)
+        # only inside region
+        A = A.tocoo()
+        idx = np.where(self.mask.ravel())[0]
+        tmp = pd.DataFrame({'row': A.row, 'col': A.col, 'data': A.data})
+        tmp.index = tmp['row']
+        tmp = tmp.loc[idx]
+        tmp.index = tmp['col']
+        tmp = tmp.loc[idx]
+        tmp['new_row'] = tmp.row.rank(method='dense') - 1
+        tmp['new_col'] = tmp.col.rank(method='dense') - 1
+        return coo_matrix((tmp.data, (tmp.new_row.astype(int), tmp.new_col.astype(int))), shape=(self.Ns, self.Ns))
+
     def __init__(self, source, destination, mask, offset=[0, 0], neighbor_ker=4):
         """
         create a gradient field instance
@@ -39,7 +81,7 @@ class Gradient_Field:
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
-        Ns = int(mask.sum())
+        self.Ns = int(mask.sum())
         self.mask = mask.astype(bool)  # only True or False
         assert self.mask.shape == self.f_star.shape[:2]
 
@@ -73,48 +115,8 @@ class Gradient_Field:
         else:
             self.b1 = correlate2d(self.f_star * self.boundary, self.neigh_ker, mode='same')
 
-        # calculate A: same value for all the channels. Use row-wise flatten.
-        a2 = self.mask.ravel()
-        m, n = self.g.shape[:2]
-        klists = []
-        K = self.neigh_ker.shape[0]
-        mid = K // 2
-        for i in range(K):
-            for j in range(K):
-                klists.append((i - mid) * n + (j - mid))
-
-        # A is still the full matrix. but outside the region A is Identity matrix
-        # diag_val = self.Np.flatten()
-        # diag_val[~self.mask.ravel()] = 1
-        # self.A = diags(diag_val)
-        # we want submatrix A.
-        self.A = diags(self.Np.flatten())
-        for k in np.array(klists)[self.neigh_ker.ravel() == 1]:
-            val = np.zeros(n * m)
-            if k > 0:
-                z = np.r_[a2[k:], np.zeros(k)]
-                # z[~self.mask.ravel()] = 0
-                val[z == 1] = -1
-                self.A.setdiag(val, k=k)
-            else:
-                z = np.r_[np.zeros(-k), a2[:k]]
-                # z[~self.mask.ravel()] = 0
-                val[z == 1] = -1
-                self.A.setdiag(val[-k:], k=k)
-        print(self.A.shape)
-        # only inside region
-        A = self.A.tocoo()
-        idx = np.where(self.mask.ravel())[0]
-        tmp = pd.DataFrame({'row': A.row, 'col': A.col, 'data': A.data})
-        tmp.index = tmp['row']
-        tmp = tmp.loc[idx]
-        tmp.index = tmp['col']
-        tmp = tmp.loc[idx]
-        tmp['new_row'] = tmp.row.rank(method='dense') - 1
-        tmp['new_col'] = tmp.col.rank(method='dense') - 1
-        self.A = coo_matrix((tmp.data, (tmp.new_row.astype(int), tmp.new_col.astype(int))), shape=(Ns, Ns))
-
         # self.A = (self.A.tolil()[self.mask.ravel(),])[:, self.mask.ravel()].reshape(-1, Ns)
+        self.A = self._calA()
 
     def print_methods(self):
         """helper function, print methods"""
