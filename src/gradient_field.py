@@ -50,9 +50,12 @@ class Gradient_Field:
             else:
                 self.neigh_ker = np.ones((3, 3), dtype=np.uint8)
         else:
-            assert neighbor_ker.shape == (3, 3)
+            # assert neighbor_ker.shape == (3, 3)
+            # # allow larger neighbor range.
+            assert neighbor_ker.shape[0] == neighbor_ker.shape[1] and neighbor_ker.shape[0] % 2 == 1
             self.neigh_ker = np.array(neighbor_ker, dtype=np.uint8)
-        self.neigh_ker[1, 1] = 0  # not include itself.
+        mid = self.neigh_ker.shape[0] // 2
+        self.neigh_ker[mid, mid] = 0  # not include itself.
         self.Np = correlate2d(np.ones(self.mask.shape, dtype=np.uint8), self.neigh_ker, mode='same')  # 2d
         self.boundary = cv2.dilate(src=self.mask.astype(np.uint8), kernel=self.neigh_ker) - self.mask.astype(np.uint8)
         self.method_list = [["dg", "import gradients", "basic seamless cloning"],
@@ -70,19 +73,30 @@ class Gradient_Field:
             self.b1 = correlate2d(self.f_star * self.boundary, self.neigh_ker, mode='same')
 
         # calculate A: same value for all the channels. Use row-wise flatten.
-        a2 = self.mask.flatten()
+        a2 = self.mask.ravel()
         m, n = self.g.shape[:2]
-        klists = np.array([-n - 1, -n, -n + 1, -1, 0, 1, n - 1, n, n + 1])
+        # klists = np.array([-n - 1, -n, -n + 1, -1, 0, 1, n - 1, n, n + 1])
+        klists = []
+        K = self.neigh_ker.shape[0]
+        mid = K // 2
+        for i in range(K):
+            for j in range(K):
+                klists.append((i - mid) * n + (j - mid))
 
-        self.A = diags(self.Np[self.mask].flatten())
-        for k in klists[self.neigh_ker.flatten() == 1]:
-            val = np.zeros(self.mask.sum())
+        # A is still the full matrix. but outside the region A is Identity matrix
+        diag_val = self.Np.flatten()
+        diag_val[~self.mask.ravel()] = 1
+        self.A = diags(diag_val)
+        for k in np.array(klists)[self.neigh_ker.ravel() == 1]:
+            val = np.zeros(n * m)
             if k > 0:
-                z = np.r_[a2[k:], np.zeros(k)][self.mask.flatten()]
+                z = np.r_[a2[k:], np.zeros(k)]
+                z[~self.mask.ravel()] = 0
                 val[z == 1] = -1
                 self.A.setdiag(val, k=k)
             else:
-                z = np.r_[np.zeros(-k), a2[:k]][self.mask.flatten()]
+                z = np.r_[np.zeros(-k), a2[:k]]
+                z[~self.mask.ravel()] = 0
                 val[z == 1] = -1
                 self.A.setdiag(val[-k:], k=k)
 
@@ -123,13 +137,28 @@ class Gradient_Field:
         print('Importing gradients: v=dg')
         # b2 sum of gradient vector: g_p - g_q. q is neighbor
         if len(self.g.shape) == 3:
-            self.b = np.array([(self.b1[i] + self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neigh_ker,
-                                                                                     mode='same'))[self.mask].flatten()
-                               for i in range(self.g.shape[2])])
-
+            self.b = []
+            for i in range(self.g.shape[2]):
+                bval = (self.b1[i] + self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neigh_ker,
+                                                                             mode='same')).ravel()
+                f_star = self.f_star[:, :, i].ravel() if len(self.f_star.shape) == 3 else self.f_star.ravel()
+                bval[~self.mask.ravel()] = f_star[~self.mask.ravel()]
+                self.b.append(bval)
+            self.b = np.array(self.b)
         else:
             b2 = self.Np * self.g - correlate2d(self.g, self.neigh_ker, mode='same')
-            self.b = (self.b + b2)[self.mask].flatten()
+            b_val = (self.b1 + b2).ravel()
+            # outside the region
+            if len(self.f_star.shape) == 3:
+                self.b = []
+                for i in range(3):
+                    b_val_copy = b_val.copy()
+                    b_val_copy[~self.mask.ravel()] = self.f_star[:, :, i].ravel()[~self.mask.ravel]
+                    self.b.append(b_val_copy)
+                self.b = np.array(self.b)
+            else:
+                b_val[~self.mask.ravel()] = self.f_star.ravel()[~self.mask.ravel()]
+                self.b = b_val
 
     def _mixing_gradients(self):
         self.cur_method = self.method_list[1]
@@ -142,4 +171,3 @@ class Gradient_Field:
     def _nonlinear_transformed_gradients(self):
         self.cur_method = self.method_list[3]
         pass
-
