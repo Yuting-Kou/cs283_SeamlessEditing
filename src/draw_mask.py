@@ -6,12 +6,14 @@ Use mouse to draw mask
 import cv2
 import numpy as np
 from os import path
+import argparse
 
 
 class MaskPainter():
     def __init__(self, impath, size=5):
         """size is the width in pixel of your drawer"""
         self.image = cv2.imread(impath)
+        self.image_path = impath
         self.mask = np.zeros_like(self.image)
         self.draw = False
         self.size = size
@@ -33,7 +35,7 @@ class MaskPainter():
         elif event == cv2.EVENT_LBUTTONUP:
             self.draw = False
 
-    def paint(self, maskname='mask.png'):
+    def paint_mask(self, maskname='mask.png'):
         cv2.namedWindow(self.window_name)
         cv2.setMouseCallback(self.window_name, self._paint)
 
@@ -66,5 +68,11 @@ class MaskPainter():
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    source = plt.imread(r'../test/swan.jpg')
-    destination = plt.imread(r'../test/kyt.jpg')
+    source_path = r'../test/kyt.jpg'
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--image", required=True, help="Path to the image")
+    args = vars(ap.parse_args())
+
+    mp = MaskPainter(args["image"])
+    print('save mask in ',mp.paint_mask())
