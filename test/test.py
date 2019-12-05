@@ -21,8 +21,8 @@ if __name__ == '__main__':
     mask[mask != 1] = 0
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty],
-                          neighbor_ker=np.ones((5, 5)))
+    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty])
+                          #neighbor_ker=np.ones((5, 5)))
 
     print('Choose methods from:', test.print_methods())
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     print(A.shape, b.shape)
     # do not need to calculate the same thing
-    A1, b1 = test.get_v(method='dgf')
-    # calculate new methods.
-    A2, b2 = test.get_v(method='dg')
-    A3, b3 = test.get_v(method='Mdg', new_mask=np.ones_like(test.g))
+    # A1, b1 = test.get_v(method='dgf')
+    # # calculate new methods.
+    # A2, b2 = test.get_v(method='dg')
+    # A3, b3 = test.get_v(method='Mdg', new_mask=np.ones_like(test.g))
