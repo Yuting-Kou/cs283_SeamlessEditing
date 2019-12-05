@@ -11,17 +11,17 @@ import numpy as np
 
 
 class MaskPainter():
-    def __init__(self, impath, size=5):
+    def __init__(self, impath):
         """size is the width in pixel of your drawer"""
-        assert path.isfile(impath)
         self.image = cv2.imread(impath)
+        assert self.image is not None
         self.image_path = impath
         self.mask = np.zeros_like(self.image)
         self.draw = False
-        self.size = size
+        self.size = 5
         self.image_rest = self.image.copy()
         self.mask_reset = self.mask.copy()
-        self.window_name = "Draw mask:   s-save; r:reset; q:quit;"
+        self.window_name = "Draw mask:   s-save; r:reset; q:quit; +:larger painter; -:smaller painter"
 
     def _paint(self, event, x, y, flags, param):
         # click and draw
@@ -46,8 +46,8 @@ class MaskPainter():
             key = cv2.waitKey(1) & 0xFF
 
             if (key == ord("r")) or (key == ord("R")):
-                self.image = self.image_copy.copy()
-                self.mask = self.mask_copy.copy()
+                self.image = self.image_rest.copy()
+                self.mask = self.mask_reset.copy()
 
             elif key == ord("s"):
                 break
@@ -55,6 +55,10 @@ class MaskPainter():
             elif key == ord("q"):
                 cv2.destroyAllWindows()
                 exit()
+            elif key == ord("+"):
+                self.size += 1
+            elif key == ord("-"):
+                self.size -= 1
 
         roi = self.mask
         cv2.imshow("Press any key to save the mask", roi)
