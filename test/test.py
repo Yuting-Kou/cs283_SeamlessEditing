@@ -20,6 +20,9 @@ if __name__ == '__main__':
 
     test = Gradient_Field(source=mp.image_g, destination=mp.image_f, mask=mask, offset=[tx, ty],
                           neighbor_ker=np.ones((5, 5)))
+
+    print('Choose methods from:', test.print_methods())
+
     A, b = test.get_v(method='dgf')
 
     print(A.shape, b.shape)
@@ -27,3 +30,4 @@ if __name__ == '__main__':
     A1, b1 = test.get_v(method='dgf')
     # calculate new methods.
     A2, b2 = test.get_v(method='dg')
+    A3, b3 = test.get_v(method='Mdg', new_mask=np.ones_like(test.g))

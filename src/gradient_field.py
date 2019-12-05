@@ -38,7 +38,7 @@ class Gradient_Field:
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
-        self.mask = mask.astype(bool) # only True or False
+        self.mask = mask.astype(bool)  # only True or False
         assert self.mask.shape == self.f_star.shape[:2]
 
         # neighbor
@@ -59,7 +59,7 @@ class Gradient_Field:
         self.boundary = cv2.dilate(src=self.mask.astype(np.uint8), kernel=self.neigh_ker) - self.mask.astype(np.uint8)
         self.method_list = [["dg", "import gradients", "basic seamless cloning"],
                             ["dgf", "mixing gradients", "transparent seamless cloning"],
-                            ["Mdf", "masked gradients", "texture flattening"],
+                            ["Mdg", "masked gradients", "texture flattening"],
                             ["abf", "nonlinear transformed gradients", "local illumination changes"]]
         self.cur_method = self.A = self.b = None
 
@@ -74,7 +74,6 @@ class Gradient_Field:
         # calculate A: same value for all the channels. Use row-wise flatten.
         a2 = self.mask.ravel()
         m, n = self.g.shape[:2]
-        # klists = np.array([-n - 1, -n, -n + 1, -1, 0, 1, n - 1, n, n + 1])
         klists = []
         K = self.neigh_ker.shape[0]
         mid = K // 2
@@ -103,7 +102,7 @@ class Gradient_Field:
         """helper function, print methods"""
         return self.method_list
 
-    def get_v(self, method="dg"):
+    def get_v(self, method="dg", **kwargs):
         """
         return A and b from the discrete of the guidance field v under different methods.
         :param method: choose different method to get different guidance field v.
@@ -116,13 +115,13 @@ class Gradient_Field:
 
         if (self.cur_method is None) or (method not in self.cur_method):
             if method in self.method_list[0]:
-                self._import_gradients()
+                self._import_gradients(**kwargs)
             elif method in self.method_list[1]:
-                self._mixing_gradients()
+                self._mixing_gradients(**kwargs)
             elif method in self.method_list[2]:
-                self._masked_gradients()
+                self._masked_gradients(**kwargs)
             elif method in self.method_list[3]:
-                self._nonlinear_transformed_gradients()
+                self._nonlinear_transformed_gradients(**kwargs)
             else:
                 raise ValueError(
                     "Not defined guidance vector methods. Please select from {}".format(self.print_methods()))
@@ -193,9 +192,41 @@ class Gradient_Field:
                 bval[~self.mask.ravel()] = self.f_star.ravel()[~self.mask.ravel()]
                 self.b = bval
 
-    def _masked_gradients(self):
+    def _masked_gradients(self, new_mask):
+        """
+        The gradient is only passed through a sparse sieve that retains only the most salient features
+        If g = f_star, it can realize in-place image transformations.
+        :param new_mask: Binary mask that turned on at a few locations of interests. E.g. edge detector.
+        """
         self.cur_method = self.method_list[2]
-        pass
+        print('Salient mask gradient: v=M*dg')
+        assert new_mask.shape[:2] == self.g.shape[:2]
+        new_mask = new_mask.astype(bool)
+        if len(self.g.shape) == 3:
+            self.b = []
+            for i in range(self.g.shape[2]):
+                grad = self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neigh_ker, mode='same')
+                mask = new_mask[:, :, i] if len(new_mask.shape) == 3 else new_mask
+                bval = (self.b1[i] + mask * grad).ravel()
+                f_star = self.f_star[:, :, i].ravel() if len(self.f_star.shape) == 3 else self.f_star.ravel()
+                bval[~self.mask.ravel()] = f_star[~self.mask.ravel()]
+                self.b.append(bval)
+            self.b = np.array(self.b)
+        else:
+            assert new_mask.shape == self.g.shape
+            grad = self.Np * self.g - correlate2d(self.g, self.neigh_ker, mode='same')
+            b_val = (self.b1 + new_mask * grad).ravel()
+            # outside the region
+            if len(self.f_star.shape) == 3:
+                self.b = []
+                for i in range(3):
+                    b_val_copy = b_val.copy()
+                    b_val_copy[~self.mask.ravel()] = self.f_star[:, :, i].ravel()[~self.mask.ravel]
+                    self.b.append(b_val_copy)
+                self.b = np.array(self.b)
+            else:
+                b_val[~self.mask.ravel()] = self.f_star.ravel()[~self.mask.ravel()]
+                self.b = b_val
 
     def _nonlinear_transformed_gradients(self):
         self.cur_method = self.method_list[3]
