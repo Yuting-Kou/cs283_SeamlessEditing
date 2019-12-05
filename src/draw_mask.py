@@ -5,6 +5,7 @@ Use mouse to draw mask
 
 import cv2
 import numpy as np
+from os import path
 
 
 class MaskPainter():
@@ -32,7 +33,7 @@ class MaskPainter():
         elif event == cv2.EVENT_LBUTTONUP:
             self.draw = False
 
-    def paint(self, mask_path='./test/mask.jpg'):
+    def paint(self, maskname='mask.png'):
         cv2.namedWindow(self.window_name)
         cv2.setMouseCallback(self.window_name, self._paint)
 
@@ -54,13 +55,12 @@ class MaskPainter():
         roi = self.mask
         cv2.imshow("Press any key to save the mask", roi)
         cv2.waitKey(0)
-        maskPath = path.join(path.dirname(self.image_path),
-                             'mask.png')
-        cv2.imwrite(maskPath, self.mask)
+        maskpath = path.join(path.dirname(self.image_path), maskname)
+        cv2.imwrite(maskpath, self.mask)
 
         # close all open windows
         cv2.destroyAllWindows()
-        return maskPath
+        return maskpath
 
 
 if __name__ == '__main__':
