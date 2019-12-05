@@ -3,15 +3,17 @@ reference: https://github.com/PPPW/poisson-image-editing/blob/master/paint_mask.
 Use mouse to draw mask
 """
 
+import argparse
+from os import path
+
 import cv2
 import numpy as np
-from os import path
-import argparse
 
 
 class MaskPainter():
     def __init__(self, impath, size=5):
         """size is the width in pixel of your drawer"""
+        assert path.isfile(impath)
         self.image = cv2.imread(impath)
         self.image_path = impath
         self.mask = np.zeros_like(self.image)
@@ -57,6 +59,8 @@ class MaskPainter():
         roi = self.mask
         cv2.imshow("Press any key to save the mask", roi)
         cv2.waitKey(0)
+        if '.' not in maskname:
+            maskname = maskname + '.png'
         maskpath = path.join(path.dirname(self.image_path), maskname)
         cv2.imwrite(maskpath, self.mask)
 
@@ -66,13 +70,14 @@ class MaskPainter():
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
 
     source_path = r'../test/kyt.jpg'
 
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--image", required=True, help="Path to the image")
+    ap.add_argument("-s", "--save", required=False, help="mask name to save")
     args = vars(ap.parse_args())
 
     mp = MaskPainter(args["image"])
-    print('save mask in ',mp.paint_mask())
+    if "save" in args:
+        print('save mask in ', mp.paint_mask(maskname=args["save"]))
