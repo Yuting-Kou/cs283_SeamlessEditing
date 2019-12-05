@@ -159,8 +159,8 @@ if __name__ == '__main__':
     ap.add_argument("-s", "--save", required=False, help="mask name to save")
     args = vars(ap.parse_args())
 
-    mp = MaskPainter(g_impath=args["source_image"],f_impath=args["destination_image"])
+    mp = MaskPainter(g_impath=args["source_image"], f_impath=args["destination_image"])
     if args["save"] is not None:
-        print('save mask in ', mp.paint_mask(maskname=args["save"]))
+        print('save mask in {2}, offset=({0},{1})'.format( mp.paint_mask(maskname=args["save"])))
     else:
-        print('save mask in ', mp.paint_mask())
+        print('save mask in  {2}, offset=({0},{1})'.format( mp.paint_mask()))
