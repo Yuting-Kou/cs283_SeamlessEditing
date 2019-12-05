@@ -151,11 +151,11 @@ if __name__ == '__main__':
     source = plt.imread(r'../test/kyt.jpg')
     print(source.shape, destination.shape)
 
-    mask = plt.imread(r'../test/target_mask.png')
+    mask = plt.imread(r'../test/mask.png')
     mask[mask != 1] = 0
     mask = mask.astype(np.uint8)[:, :, 0]
 
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[-345,18])
+    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[-136, 50])
     A, b = test.get_v()
 
     plt.figure(figsize=(10, 5))
