@@ -38,8 +38,7 @@ class Gradient_Field:
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
-        self.mask = mask.astype(bool)
-        print('mask value set:', np.unique(self.mask))
+        self.mask = mask.astype(bool) # only True or False
         assert self.mask.shape == self.f_star.shape[:2]
 
         # neighbor
@@ -161,8 +160,38 @@ class Gradient_Field:
                 self.b = b_val
 
     def _mixing_gradients(self):
+        """mixing gradient: transparent importing."""
         self.cur_method = self.method_list[1]
-        pass
+        print('Mixing gradient: v= max(dg, df_star)')
+        if len(self.g.shape) == 3:
+            self.b = []
+            for i in range(self.g.shape[2]):
+                neg_grad_g = correlate2d(self.g[:, :, i], self.neigh_ker, mode='same')
+                neg_grad_f = correlate2d(self.f_star[:, :, i], self.neigh_ker, mode='same')
+                neg_grad = np.where(neg_grad_f > neg_grad_g, neg_grad_f, neg_grad_g)
+                bval = (self.b1[i] + self.Np * self.g[:, :, i] - neg_grad).ravel()
+                f_star = self.f_star[:, :, i].ravel() if len(self.f_star.shape) == 3 else self.f_star.ravel()
+                bval[~self.mask.ravel()] = f_star[~self.mask.ravel()]
+                self.b.append(bval)
+            self.b = np.array(self.b)
+        else:
+            neg_grad_g = correlate2d(self.g, self.neigh_ker, mode='same')
+            # outside the region
+            if len(self.f_star.shape) == 3:
+                self.b = []
+                for i in range(3):
+                    neg_grad_f = correlate2d(self.f_star[:, :, i], self.neigh_ker, mode='same')
+                    neg_grad = np.where(neg_grad_f > neg_grad_g, neg_grad_f, neg_grad_g)
+                    bval = (self.b1 + self.Np * self.g - neg_grad).ravel()
+                    bval[~self.mask.ravel()] = self.f_star[:, :, i].ravel()[~self.mask.ravel]
+                    self.b.append(bval)
+                self.b = np.array(self.b)
+            else:
+                neg_grad_f = correlate2d(self.f_star, self.neigh_ker, mode='same')
+                neg_grad = np.where(neg_grad_f > neg_grad_g, neg_grad_f, neg_grad_g)
+                bval = (self.b1 + self.Np * self.g - neg_grad).ravel()
+                bval[~self.mask.ravel()] = self.f_star.ravel()[~self.mask.ravel()]
+                self.b = bval
 
     def _masked_gradients(self):
         self.cur_method = self.method_list[2]

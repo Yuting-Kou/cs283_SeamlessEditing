@@ -19,13 +19,11 @@ if __name__ == '__main__':
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
     test = Gradient_Field(source=mp.image_g, destination=mp.image_f, mask=mask, offset=[tx, ty],
-                          neighbor_ker=np.ones((5,5)))
-    A, b = test.get_v()
+                          neighbor_ker=np.ones((5, 5)))
+    A, b = test.get_v(method='dgf')
 
     print(A.shape, b.shape)
-    # plt.figure(figsize=(10, 5))
-    # plt.subplot(1, 2, 1)
-    # plt.imshow(test.f_star)
-    # plt.subplot(1, 2, 2)
-    # plt.imshow(test.g)
-    # plt.show()
+    # do not need to calculate the same thing
+    A1, b1 = test.get_v(method='dgf')
+    # calculate new methods.
+    A2, b2 = test.get_v(method='dg')
