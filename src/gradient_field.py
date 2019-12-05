@@ -29,6 +29,7 @@ class Gradient_Field:
         :param source: source image g which is the pixel function within the selected area.
             Notes: the source image g will be affine transformed into same size of f* (destination img).
         :param offset: set the position of offset area when conduct above affine transformation.
+                offset[0]:tx, move rightwards. offset[1]: ty. move downwards.
         :param destination: destination image f* which is the pixel function outside of the selected area.
         :param mask: corresponds to the region of source image that will be copied and
         be placed into the desired location in destination img. It has same shapes as destination image f*.
@@ -38,7 +39,7 @@ class Gradient_Field:
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
         self.f_star = destination
         self.mask = mask.astype(np.uint8)
-        print('mask value set:',np.unique(self.mask))
+        print('mask value set:', np.unique(self.mask))
 
         # neighbor
         if isinstance(neighbor_ker, int):
@@ -122,13 +123,12 @@ class Gradient_Field:
         # b2 sum of gradient vector: g_p - g_q. q is neighbor
         if len(self.g.shape) == 3:
             self.b = np.array([(self.b1[i] + self.Np * self.g[:, :, i] - correlate2d(self.g[:, :, i], self.neighbor_ker,
-                                                                   mode='same')).flatten()
-                           for i in range(self.g.shape[2])])
+                                                                                     mode='same')).flatten()
+                               for i in range(self.g.shape[2])])
 
         else:
             b2 = self.Np * self.g - correlate2d(self.g, self.neighbor_ker, mode='same')
-            self.b = (self.b+b2).flatten()
-
+            self.b = (self.b + b2).flatten()
 
     def _mixing_gradients(self):
         self.cur_method = self.method_list[1]
@@ -150,15 +150,14 @@ if __name__ == '__main__':
     destination = plt.imread(r'../test/kyt.jpg')
     print(source.shape, destination.shape)
 
-    ker = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
     mask = np.zeros(destination.shape[:2], np.uint8)
     mask[500:-500, 500:-500] = 1
     test = Gradient_Field(source=source, destination=destination, mask=mask)
+    A, b = test.get_v()
 
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
-    plt.imshow(test.g)
-    plt.subplot(1, 2, 2)
     plt.imshow(test.f_star)
+    plt.subplot(1, 2, 2)
+    plt.imshow(test.g)
     plt.show()
-    A,b = test.get_v()
