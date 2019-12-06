@@ -26,6 +26,7 @@ class Gradient_Field:
 
     def _laplacian(self, In):
         """ take gradient of In image."""
+        In = In.astype(float)
         if len(In.shape) == 3:
             res = np.zeros_like(In)
             for i in range(3):
@@ -57,8 +58,8 @@ class Gradient_Field:
         :param neighbor_ker: int or squared array. choose 4 or 8 neighbors, or user_default boarder kernel.
         """
 
-        self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset)
-        self.f_star = destination
+        self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset).astype(float)
+        self.f_star = destination.astype(float)
         self.Ns = int(mask.sum())
         self.mask = mask.astype(bool)  # only True or False
         assert self.mask.shape == self.f_star.shape[:2]
@@ -191,3 +192,11 @@ class Gradient_Field:
     def _nonlinear_transformed_gradients(self):
         self.cur_method = self.method_list[3]
         pass
+
+    def combine(self, x):
+        res = self.f_star.copy()
+        res[self.mask] = x
+        res[res > 255] = 255
+        res[res < 0] = 0
+
+        return res / 255
