@@ -6,10 +6,11 @@ from scipy.signal import correlate2d
 class Map:
     def __init__(self, mask):
         self.mask = mask.astype(int)
+        kernel = np.array([[0,1,0], [1,0,1], [0,1,0]], dtype = np.uint8)
         self.bnd = self.mask & \
-                   cv2.dilate(1-mask, np.array([[0,1,0], [1,0,1], [0,1,0]], dtype = np.uint8)).astype(int)
+                   cv2.dilate(1-mask, kernel).astype(int)
         outbnd = (~self.mask) & \
-                 cv2.dilate(mask, np.array([[0,1,0], [1,0,1], [0,1,0]], dtype = np.uint8)).astype(int)
+                 cv2.dilate(mask, kernel).astype(int)
         tmp = np.nonzero(outbnd)
         self.outbnd = set(zip(tmp[0], tmp[1]))
         tmp = np.nonzero(mask)
@@ -40,7 +41,9 @@ class Poisson_system:
         self.f = destination.astype(float)
         self.mask = mask
         self.map = Map(mask)
-        self.Np = correlate2d(np.ones(mask.shape), np.array([[0,1,0], [1,0,1], [0,1,0]]), mode = 'same')
+
+        self.kernel = np.array([[0,1,0], [1,0,1], [0,1,0]])
+        self.Np = correlate2d(np.ones(mask.shape), self.kernel, mode = 'same')
 
         self.A = self._get_A()
 
@@ -74,8 +77,8 @@ class Poisson_system:
     def _laplacian(self):
         g = np.zeros(self.g.shape)
         for i in range(3):
-            g[:,:,i] = self.Np * self.g[:,:,i]- \
-                correlate2d(self.g[:,:,i], np.array([[0,1,0], [1,0,1], [0,1,0]]), mode='same')
+            g[:, :, i] = self.Np * self.g[:, :, i]- \
+                correlate2d(self.g[:, :, i], self.kernel, mode='same')
         return g[self.mask == 1]
 
     def combine(self, x):
