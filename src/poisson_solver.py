@@ -2,6 +2,19 @@ import numpy as np
 from numba import jit
 import time
 
+def timeit(f):
+    def timed(*args, **kw):
+
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+
+        print('func:%r took: %2.4f sec' % (f.__name__, te-ts))
+        return result
+
+    return timed
+
+
 @timeit
 def sor_solver(A, b, omega, x0, eps, max_iter = 30):
     x = x0
@@ -22,6 +35,7 @@ def sor_solver(A, b, omega, x0, eps, max_iter = 30):
         cnt += 1
     print(cnt)
     return x
+
 
 @timeit
 @jit(nopython=True, fastmath = True)
@@ -48,19 +62,6 @@ def my_mul(data, rows, x):
         res[i] = np.dot(data[i], x[rows[i]])
     return res
 
-
-def timeit(f):
-
-    def timed(*args, **kw):
-
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-
-        print('func:%r took: %2.4f sec' % (f.__name__, te-ts))
-        return result
-
-    return timed
 
 #x = sor_solver(A, b[0], 1.5, np.zeros(A.shape[0]), 1e-6)
 

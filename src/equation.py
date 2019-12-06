@@ -82,11 +82,10 @@ class Poisson_system:
         return g[self.mask == 1]
 
     def combine(self, x):
-        x[x > 255] = 255
-        x[x < 0] = 0
-
         res = self.f.copy()
         res[self.mask == 1] = x
+        res[res > 255] = 255
+        res[res < 0] = 0
 
         return res/255
 
