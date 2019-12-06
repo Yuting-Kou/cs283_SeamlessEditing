@@ -45,7 +45,7 @@ class Gradient_Field:
             b1 = correlate2d(self.f_star * self.boundary, self.neigh_ker, mode='same')
         return b1
 
-    def __init__(self, source, destination, mask, offset=[0, 0], neighbor_ker=4):
+    def __init__(self, source, destination, mask, offset=[0, 0], ker=4):
         """
         create a gradient field instance
         :param source: source image g which is the pixel function within the selected area.
@@ -55,7 +55,7 @@ class Gradient_Field:
         :param destination: destination image f* which is the pixel function outside of the selected area.
         :param mask: corresponds to the region of source image that will be copied and
         be placed into the desired location in destination img. It has same shapes as destination image f*.
-        :param neighbor_ker: int or squared array. choose 4 or 8 neighbors, or user_default boarder kernel.
+        :param ker: int or squared array. choose 4 or 8 neighbors, or user_default boarder kernel.
         """
 
         self.g = Gradient_Field._affine_transform(source, destination.shape[:2], offset=offset).astype(float)
@@ -65,16 +65,16 @@ class Gradient_Field:
         assert self.mask.shape == self.f_star.shape[:2]
 
         # create neighbor kernel
-        if isinstance(neighbor_ker, int):
-            assert (neighbor_ker == 4) or (neighbor_ker) == 8
-            if neighbor_ker == 4:
+        if isinstance(ker, int):
+            assert (ker == 4) or (ker) == 8
+            if ker == 4:
                 self.neigh_ker = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
             else:
                 self.neigh_ker = np.ones((3, 3), dtype=np.uint8)
         else:
             # allow larger neighbor range.
-            assert neighbor_ker.shape[0] == neighbor_ker.shape[1] and neighbor_ker.shape[0] % 2 == 1
-            self.neigh_ker = np.array(neighbor_ker, dtype=np.uint8)
+            assert ker.shape[0] == ker.shape[1] and ker.shape[0] % 2 == 1
+            self.neigh_ker = np.array(ker, dtype=np.uint8)
         mid = self.neigh_ker.shape[0] // 2
         self.neigh_ker[mid, mid] = 0  # not include itself.
 

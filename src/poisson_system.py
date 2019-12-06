@@ -37,47 +37,46 @@ class Poisson_system:
         M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
         return cv2.warpAffine(Iin, M, (output_size[1], output_size[0]))
 
-    @staticmethod
-    def create_kernel(neighbor_ker=4):
-        if isinstance(neighbor_ker, int):
-            assert (neighbor_ker == 4) or (neighbor_ker) == 8
-            if neighbor_ker == 4:
-                neigh_ker = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
-            else:
-                neigh_ker = np.ones((3, 3), dtype=np.uint8)
-        else:
-            # allow larger neighbor range.
-            assert neighbor_ker.shape[0] == neighbor_ker.shape[1] and neighbor_ker.shape[0] % 2 == 1
-            neigh_ker = np.array(neighbor_ker, dtype=np.uint8)
-        mid = neigh_ker.shape[0] // 2
-        neigh_ker[mid, mid] = 0  # not include itself.
-        return neigh_ker
-
-    def __init__(self, source, destination, mask, offset=[0, 0], ker=4):
+    def __init__(self, source, destination, mask, offset=[0, 0]):
         self.g = Poisson_system._affine_transform(source, destination.shape[:2], offset=offset).astype(float)
         self.f = destination.astype(float)
         self.mask = mask
         self.map = Map(mask)
 
         # create kernel
-        self.kernel = Poisson_system.create_kernel(neighbor_ker=ker)
+        self.kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
         self.Np = correlate2d(np.ones(mask.shape), self.kernel, mode='same')
         self.A = self._get_A()
-        self.method_list = [["dg", "import gradients", "basic seamless cloning"],
-                            ["dgf", "mixing gradients", "transparent seamless cloning"],
-                            ["Mdg", "masked gradients", "texture flattening"],
+        self.method_list = [["dg", "import_gradients", "basic seamless cloning"],
+                            ["dgf", "mixing_gradients", "transparent seamless cloning"],
+                            ["Mdg", "masked_gradients", "texture flattening"],
                             ["abf", "nonlinear transformed gradients", "local illumination changes"]]
         self.cur_method = self.b = None
 
-    def get_Ab(self, method='dg'):
-        if method == 'dg':
-            v = self._laplacian()
-        elif method == 'mixing_gradients':
-            v = self._mixing_gradients()
-        elif method == 'masked_gradients':
-            v = self._masked_gradients()
-        b = self._get_b(v)
-        return self.A, b
+    def get_Ab(self, method='dg', **kwargs):
+        """
+        return A and b from the discrete of the guidance field v under different methods.
+        :param method: choose different method to get different guidance field v.
+            - "dg"/ "import gradients"/ "basic seamless cloning": v = \partial g (default)
+            - "dgf"/ "mixing gradients"/ "transparent seamless cloning": v = max(\partial g, \partial f)
+            - "Mdf"/ "masked gradients"/ "texture flattening": v = M \partial f
+            - "abf"/ "nonlinear transformed gradients"/ "local illumination changes": v=a^b|\partial f|^{-b}\partial f
+        :return: the discrete of the guidance field v under different methods.
+        """
+        if (self.cur_method is None) or (method not in self.cur_method):
+            if method in self.method_list[0]:
+                v = self._import_gradients(**kwargs)
+            elif method in self.method_list[1]:
+                v = self._mixing_gradients(**kwargs)
+            elif method in self.method_list[2]:
+                v = self._masked_gradients(**kwargs)
+            else:
+                raise ValueError(
+                    "Not defined guidance vector methods. Please select from {}".format(self.print_methods()))
+            self.b = self._get_b(v)
+        # already calculated
+        assert (self.A is not None) and (self.b is not None)
+        return self.A, self.b
 
     def _get_A(self):
         n = (self.mask == 1).sum()

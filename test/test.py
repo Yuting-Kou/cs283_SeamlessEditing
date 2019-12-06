@@ -2,6 +2,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from old.gradient_field import Gradient_Field
 from src.mask import MaskPainter
 from src.poisson_solver import sor_solver_jit
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
     begin = time.time()
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty], neighbor_ker=4)
+    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty],ker=np.ones((9, 9)))
     A, b = test.get_v(method='dg')
     A = A.tolil()
 
