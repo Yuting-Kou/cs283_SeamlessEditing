@@ -53,7 +53,7 @@ def sor_solver(A, b, omega, x0, eps, max_iter=30):
 
 @timeit
 @jit(nopython=True, fastmath = True)
-def sor_solver_jit(data, rows, diag, b, omega, x0, eps = 2e-3, max_iter = 2000):
+def sor_solver_jit(data, rows, diag, b, omega, x0, eps = 3e-3, max_iter = 2000):
     x = x0
     err = np.linalg.norm(my_mul(data, rows, x)-b)
     cnt = 0

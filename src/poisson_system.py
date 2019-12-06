@@ -72,7 +72,11 @@ class Poisson_system:
     def get_Ab(self, method='dg'):
         if method == 'dg':
             v = self._laplacian()
-            b = self._get_b(v)
+        elif method == 'mixing_gradients':
+            v = self._mixing_gradients()
+        elif method == 'masked_gradients':
+            v = self._masked_gradients()
+        b = self._get_b(v)
         return self.A, b
 
     def _get_A(self):
@@ -102,6 +106,29 @@ class Poisson_system:
             g[:, :, i] = self.Np * self.g[:, :, i] - \
                          correlate2d(self.g[:, :, i], self.kernel, mode='same')
         return g[self.mask == 1]
+
+    def _mixing_gradients(self):
+        v = np.zeros(self.g.shape)
+        place = ['[:-1, :]', '[1:, :]', '[:, :-1]', '[:, 1:]']
+        idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
+        for i in range(4):
+            g, f = self.g.copy(), self.f.copy()
+            exec('g' + place[idx[i][0]] + ' -= g' + place[idx[i][1]])
+            exec('f' + place[idx[i][0]] + ' -= f' + place[idx[i][1]])
+            v += np.where(abs(f) > abs(g), f, g)
+        return v[self.mask == 1]
+
+    def _masked_gradients(self):
+        edge = cv2.Canny(cv2.cvtColor(self.f.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
+        v = np.zeros(self.g.shape)
+        place = [':-1, :', '1:, :', ':, :-1', ':, 1:']
+        idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
+        for i in range(4):
+            exec('f = self.f[' + place[idx[i][0]] + '] - self.f[' + place[idx[i][1]] + ']')
+            exec('v[' + place[idx[i][0]] +
+                 '] += np.where(edge[' + place[idx[i][0]] + ', np.newaxis] != edge[' +
+                 place[idx[i][1]] + ', np.newaxis], f, 0)')
+        return v[self.mask == 1]
 
     def combine(self, x):
         res = self.f.copy()
