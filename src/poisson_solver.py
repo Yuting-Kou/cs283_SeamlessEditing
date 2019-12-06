@@ -1,6 +1,20 @@
+import time
+
 import numpy as np
 from numba import jit
-import time
+
+
+def timeit(f):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+
+        print('func:%r took: %2.4f sec' % (f.__name__, te - ts))
+        return result
+
+    return timed
+
 
 def timeit(f):
     def timed(*args, **kw):
@@ -16,54 +30,51 @@ def timeit(f):
 
 
 @timeit
-def sor_solver(A, b, omega, x0, eps, max_iter = 30):
+def sor_solver(A, b, omega, x0, eps, max_iter=30):
     x = x0
-    err = np.linalg.norm(A@x-b)
+    err = np.linalg.norm(A @ x - b)
     cnt = 0
     diag = A.diagonal()
     while (err >= eps) and cnt < max_iter:
         for i in range(A.shape[0]):
-            #tmp = np.dot(A[i], x)
+            # tmp = np.dot(A[i], x)
             tmp = np.array(A.data[i]).dot(x[A.rows[i]])
-            x[i] += omega * (b[i]-tmp)/diag[i]
+            x[i] += omega * (b[i] - tmp) / diag[i]
             '''
             if i % 10000 == 0:
                 print(cnt, i, np.linalg.norm(A@x-b))
             '''
         print(cnt, err)
-        err = np.linalg.norm(A@x-b)
+        err = np.linalg.norm(A @ x - b)
         cnt += 1
     print(cnt)
     return x
 
 
 @timeit
-@jit(nopython=True, fastmath = True)
-def sor_solver_jit(data, rows, diag, b, omega, x0, eps, max_iter = 30):
+@jit(nopython=True, fastmath=True)
+def sor_solver_jit(data, rows, diag, b, omega, x0, eps, max_iter=30):
     x = x0
-    err = np.linalg.norm(my_mul(data, rows, x)-b)
+    err = np.linalg.norm(my_mul(data, rows, x) - b)
     cnt = 0
     while (err >= eps) and cnt < max_iter:
         for i in range(len(x0)):
             tmp = data[i].dot(x[rows[i]])
-            x[i] += omega * (b[i]-tmp)/diag[i]
+            x[i] += omega * (b[i] - tmp) / diag[i]
         print(cnt, err)
-        err = np.linalg.norm(my_mul(data, rows, x)-b)
+        err = np.linalg.norm(my_mul(data, rows, x) - b)
         cnt += 1
     print(cnt)
     return x
 
 
-@jit(nopython = True, parallel = True, fastmath = True)
+@jit(nopython=True, parallel=True, fastmath=True)
 def my_mul(data, rows, x):
     n = len(x)
-    res = np.zeros(x.shape, dtype = np.float64)
+    res = np.zeros(x.shape, dtype=np.float64)
     for i in range(n):
         res[i] = np.dot(data[i], x[rows[i]])
     return res
-
-
-#x = sor_solver(A, b[0], 1.5, np.zeros(A.shape[0]), 1e-6)
 
 '''
 A = np.array([[4,-1,-6,0], [-5, -4, 10, 8], [0, 9, 4, -2], [1, 0, -7, 5]])
@@ -73,4 +84,3 @@ eps = 1e-6
 
 x = sor_solver(A, b, 1, np.zeros(4), eps)
 '''
-
