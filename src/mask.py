@@ -84,6 +84,7 @@ class MaskPainter():
     def paint_mask(self, maskname='mask.png'):
         cv2.namedWindow(self.window_name)
         cv2.setMouseCallback(self.window_name, self._paint)
+        cv2.resizeWindow(self.window_name, 600, 600)
 
         while True:
             cv2.imshow(self.window_name, self.image_g)
