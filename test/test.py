@@ -1,15 +1,16 @@
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.equation import Poisson_system
 from src.gradient_field import Gradient_Field
-from src.poisson_solver import sor_solver
 
 if __name__ == '__main__':
     paths = '../test/'
     destination = 'swan.jpg'
     source = 'kyt.jpg'
     save = 'mask.png'
-
 
     # mp = MaskPainter(g_impath=paths + source, f_impath=paths + destination)
     # tx, ty, savepath = mp.paint_mask(maskname=save)
@@ -23,12 +24,18 @@ if __name__ == '__main__':
     mask[mask != 1] = 0
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty],# neighbor_ker=4)
-                          neighbor_ker=np.ones((9, 9)))
+    begin = time.time()
+    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty],  neighbor_ker=4)
+    A, b = test.get_v(method='dg')
+    print('It costs {:.2f} sec.'.format(time.time() - begin))
+    begin = time.time()
+    test1 = Poisson_system(source=source, destination=destination, mask=mask, offset=[tx, ty])
+    A1, b1 = test1.get_Ab(method='dg')
+    print('It costs {:.2f} sec.'.format(time.time() - begin))
 
     # print('Choose methods from:', test.print_methods())
     #
-    A, b = test.get_v(method='dg')
+
     # x = sor_solver(A, b[0], 1.5, np.zeros(A.shape[0]), 1e-6)
 
     #
