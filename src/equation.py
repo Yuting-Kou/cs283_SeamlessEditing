@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 from scipy.sparse import lil_matrix
-from scipy.signal import correlate2d
+from scipy.signal import correlate2d, convolve2d
+from scipy.ndimage import gaussian_filter
 
 class Map:
     def __init__(self, mask):
@@ -49,11 +50,13 @@ class Poisson_system:
 
     def get_Ab(self, method = 'dg'):
         if method == 'dg':
-            v = self._laplacian()
+            v = self._laplacian(self.g)
         elif method == 'mixing_gradients':
             v = self._mixing_gradients()
         elif method == 'masked_gradients':
             v = self._masked_gradients()
+        elif method == 'illumination':
+            v = self._illumination_gradients()
         b = self._get_b(v)
         return self.A, b
 
@@ -78,12 +81,12 @@ class Poisson_system:
                     b[self.map.idx2pos[(x, y)]] += self.f[new_x, new_y]
         return b
 
-    def _laplacian(self):
-        g = np.zeros(self.g.shape)
+    def _laplacian(self, x):
+        v = np.zeros(x.shape)
         for i in range(3):
-            g[:, :, i] = self.Np * self.g[:, :, i]- \
-                correlate2d(self.g[:, :, i], self.kernel, mode='same')
-        return g[self.mask == 1]
+            v[:, :, i] = self.Np * x[:, :, i]- \
+                correlate2d(x[:, :, i], self.kernel, mode='same')
+        return v[self.mask == 1]
 
     def _mixing_gradients(self):
         v = np.zeros(self.g.shape)
@@ -97,16 +100,29 @@ class Poisson_system:
         return v[self.mask == 1]
 
     def _masked_gradients(self):
-        edge = cv2.Canny(cv2.cvtColor(self.f.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
+        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
         v = np.zeros(self.g.shape)
         place = [':-1, :', '1:, :', ':, :-1', ':, 1:']
         idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
         for i in range(4):
-            exec('f = self.f[' + place[idx[i][0]] + '] - self.f[' + place[idx[i][1]] + ']')
+            exec('g = self.g[' + place[idx[i][0]] + '] - self.g[' + place[idx[i][1]] + ']')
             exec('v[' + place[idx[i][0]] +
                  '] += np.where(edge[' + place[idx[i][0]] + ', np.newaxis] != edge[' +
-                 place[idx[i][1]] + ', np.newaxis], f, 0)')
+                 place[idx[i][1]] + ', np.newaxis], g, 0)')
         return v[self.mask == 1]
+
+    def _illumination_gradients(self):
+        df = self._laplacian(self.g)
+        beta = 0.2
+        v = np.zeros(df.shape)
+        for i in range(3):
+            blur = gaussian_filter(self.g[:,:,i], sigma=3)
+            dx = correlate2d(blur, np.array([[0,0,0], [-0.5, 0, 0.5], [0,0,0]]), mode = 'same')
+            dy = correlate2d(blur, np.array([[0,0.5,0], [0, 0, 0], [0,-0.5,0]]), mode = 'same')
+            norm = (dx**2 + dy**2) ** 0.5
+            alpha = 0.2 * norm[self.mask == 1].mean()
+            v[:, i] = (alpha/norm[self.mask == 1]) ** beta * df[: ,i]
+        return v
 
     def combine(self, x):
         res = self.f.copy()
