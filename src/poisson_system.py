@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-from scipy.sparse import lil_matrix
-from scipy.signal import correlate2d, convolve2d
 from scipy.ndimage import gaussian_filter
 from scipy.signal import correlate2d
 from scipy.sparse import lil_matrix
@@ -108,8 +106,8 @@ class Poisson_system:
     def _laplacian(self, x):
         v = np.zeros(x.shape)
         for i in range(3):
-            v[:, :, i] = self.Np * x[:, :, i]- \
-                correlate2d(x[:, :, i], self.kernel, mode='same')
+            v[:, :, i] = self.Np * x[:, :, i] - \
+                         correlate2d(x[:, :, i], self.kernel, mode='same')
         return v[self.mask == 1]
 
     def _mixing_gradients(self):
@@ -140,12 +138,12 @@ class Poisson_system:
         beta = 0.2
         v = np.zeros(df.shape)
         for i in range(3):
-            blur = gaussian_filter(self.g[:,:,i], sigma=3)
-            dx = correlate2d(blur, np.array([[0,0,0], [-0.5, 0, 0.5], [0,0,0]]), mode = 'same')
-            dy = correlate2d(blur, np.array([[0,0.5,0], [0, 0, 0], [0,-0.5,0]]), mode = 'same')
-            norm = (dx**2 + dy**2) ** 0.5
+            blur = gaussian_filter(self.g[:, :, i], sigma=3)
+            dx = correlate2d(blur, np.array([[0, 0, 0], [-0.5, 0, 0.5], [0, 0, 0]]), mode='same')
+            dy = correlate2d(blur, np.array([[0, 0.5, 0], [0, 0, 0], [0, -0.5, 0]]), mode='same')
+            norm = (dx ** 2 + dy ** 2) ** 0.5
             alpha = 0.2 * norm[self.mask == 1].mean()
-            v[:, i] = (alpha/norm[self.mask == 1]) ** beta * df[: ,i]
+            v[:, i] = (alpha / norm[self.mask == 1]) ** beta * df[:, i]
         return v
 
     def combine(self, x):
@@ -155,11 +153,3 @@ class Poisson_system:
         res[res < 0] = 0
 
         return res / 255
-
-
-
-
-
-
-
-

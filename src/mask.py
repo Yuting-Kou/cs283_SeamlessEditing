@@ -32,6 +32,7 @@ class MaskPainter():
         self.window_name = "Draw mask:   s-save; r:reset; q:quit; l:larger painter; m:smaller painter"
         self.window_name_move = "Move mask:   s-save; r:reset; q:quit;"
         self.to_move = False
+        self.move=False
         self.x0 = 0
         self.y0 = 0
         self.is_first = True
@@ -42,13 +43,19 @@ class MaskPainter():
         # click and draw
         if event == cv2.EVENT_LBUTTONDOWN:
             self.draw = True
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            self.move = True
         elif event == cv2.EVENT_MOUSEMOVE:
-            if self.draw:
+            if self.move:
+                cv2.moveWindow(self.window_name, x, y)
+            elif self.draw:
                 cv2.rectangle(self.image_g, (x - self.size, y - self.size), (x + self.size, y + self.size),
                               (0, 255, 0), -1)
                 cv2.rectangle(self.mask, (x - self.size, y - self.size), (x + self.size, y + self.size),
                               (255, 255, 255), -1)
                 cv2.imshow(self.window_name, self.image_g)
+        elif event == cv2.EVENT_RBUTTONUP:
+            self.move = False
         elif event == cv2.EVENT_LBUTTONUP:
             self.draw = False
 
@@ -82,9 +89,8 @@ class MaskPainter():
             self.to_move = False
 
     def paint_mask(self, maskname='mask.png'):
-        cv2.namedWindow(self.window_name)
+        cv2.namedWindow(self.window_name,0)
         cv2.setMouseCallback(self.window_name, self._paint)
-        cv2.resizeWindow(self.window_name, 600, 600)
 
         while True:
             cv2.imshow(self.window_name, self.image_g)
@@ -115,7 +121,7 @@ class MaskPainter():
         self.original_mask_copy[np.where(self.mask != 0)] = 255
 
         self.mask = self.original_mask_copy.copy()
-        cv2.namedWindow(self.window_name_move)
+        cv2.namedWindow(self.window_name_move,0)
         cv2.setMouseCallback(self.window_name_move,
                              self._move_mask_handler)
 

@@ -6,6 +6,7 @@ import numpy as np
 from old.gradient_field import Gradient_Field
 from src.mask import MaskPainter
 from src.poisson_solver import sor_solver_jit
+from src.poisson_system import Poisson_system
 
 if __name__ == '__main__':
     paths = '../test/'
@@ -19,6 +20,8 @@ if __name__ == '__main__':
         tx, ty, savepath = mp.paint_mask(maskname=save)
         print('save mask in' + savepath)
         print('offset=({0},{1})'.format(tx, ty))
+        source = mp.image_g
+        destination = mp.image_f
     else:
         source = plt.imread(source)  # source=mp.image_g
         destination = plt.imread(destination)  # destination=mp.image_f
@@ -29,8 +32,9 @@ if __name__ == '__main__':
     mask = mask.astype(np.uint8)[:, :, 0]  # only 1 channel mask
 
     begin = time.time()
-    test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty],ker=np.ones((9, 9)))
-    A, b = test.get_v(method='dg')
+    # test = Gradient_Field(source=source, destination=destination, mask=mask, offset=[tx, ty], ker=4)
+    test = Poisson_system(source=source, destination=destination, mask=mask, offset=[tx, ty])
+    A, b = test.get_Ab(method='dg')
     A = A.tolil()
 
     data = [np.array(it) for it in A.data]
