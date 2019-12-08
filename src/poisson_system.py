@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+from scipy.sparse import lil_matrix
+from scipy.signal import correlate2d, convolve2d
+from scipy.ndimage import gaussian_filter
 from scipy.signal import correlate2d
 from scipy.sparse import lil_matrix
 
@@ -46,11 +49,12 @@ class Poisson_system:
         # create kernel
         self.kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
         self.Np = correlate2d(np.ones(mask.shape), self.kernel, mode='same')
+
         self.A = self._get_A()
         self.method_list = [["dg", "import_gradients", "basic seamless cloning"],
                             ["dgf", "mixing_gradients", "transparent seamless cloning"],
                             ["Mdg", "masked_gradients", "texture flattening"],
-                            ["abf", "nonlinear transformed gradients", "local illumination changes"]]
+                            ["ilm", "illumination", "change local ilumination"]]
         self.cur_method = self.b = None
 
     def get_Ab(self, method='dg', **kwargs):
@@ -65,11 +69,13 @@ class Poisson_system:
         """
         if (self.cur_method is None) or (method not in self.cur_method):
             if method in self.method_list[0]:
-                v = self._import_gradients(**kwargs)
+                v = self._laplacian(self.g)
             elif method in self.method_list[1]:
                 v = self._mixing_gradients(**kwargs)
             elif method in self.method_list[2]:
                 v = self._masked_gradients(**kwargs)
+            elif method in self.method_list[3]:
+                v = self._illumination_gradients(**kwargs)
             else:
                 raise ValueError(
                     "Not defined guidance vector methods. Please select from {}".format(self.print_methods()))
@@ -99,12 +105,12 @@ class Poisson_system:
                     b[self.map.idx2pos[(x, y)]] += self.f[new_x, new_y]
         return b
 
-    def _laplacian(self):
-        g = np.zeros(self.g.shape)
+    def _laplacian(self, x):
+        v = np.zeros(x.shape)
         for i in range(3):
-            g[:, :, i] = self.Np * self.g[:, :, i] - \
-                         correlate2d(self.g[:, :, i], self.kernel, mode='same')
-        return g[self.mask == 1]
+            v[:, :, i] = self.Np * x[:, :, i]- \
+                correlate2d(x[:, :, i], self.kernel, mode='same')
+        return v[self.mask == 1]
 
     def _mixing_gradients(self):
         v = np.zeros(self.g.shape)
@@ -118,16 +124,29 @@ class Poisson_system:
         return v[self.mask == 1]
 
     def _masked_gradients(self):
-        edge = cv2.Canny(cv2.cvtColor(self.f.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
+        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
         v = np.zeros(self.g.shape)
         place = [':-1, :', '1:, :', ':, :-1', ':, 1:']
         idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
         for i in range(4):
-            exec('f = self.f[' + place[idx[i][0]] + '] - self.f[' + place[idx[i][1]] + ']')
+            exec('g = self.g[' + place[idx[i][0]] + '] - self.g[' + place[idx[i][1]] + ']')
             exec('v[' + place[idx[i][0]] +
                  '] += np.where(edge[' + place[idx[i][0]] + ', np.newaxis] != edge[' +
-                 place[idx[i][1]] + ', np.newaxis], f, 0)')
+                 place[idx[i][1]] + ', np.newaxis], g, 0)')
         return v[self.mask == 1]
+
+    def _illumination_gradients(self):
+        df = self._laplacian(self.g)
+        beta = 0.2
+        v = np.zeros(df.shape)
+        for i in range(3):
+            blur = gaussian_filter(self.g[:,:,i], sigma=3)
+            dx = correlate2d(blur, np.array([[0,0,0], [-0.5, 0, 0.5], [0,0,0]]), mode = 'same')
+            dy = correlate2d(blur, np.array([[0,0.5,0], [0, 0, 0], [0,-0.5,0]]), mode = 'same')
+            norm = (dx**2 + dy**2) ** 0.5
+            alpha = 0.2 * norm[self.mask == 1].mean()
+            v[:, i] = (alpha/norm[self.mask == 1]) ** beta * df[: ,i]
+        return v
 
     def combine(self, x):
         res = self.f.copy()
@@ -136,3 +155,11 @@ class Poisson_system:
         res[res < 0] = 0
 
         return res / 255
+
+
+
+
+
+
+
+
