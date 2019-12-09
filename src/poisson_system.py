@@ -34,15 +34,18 @@ class Poisson_system:
         """make sure mask is 2D and only 0 and 1"""
         if len(mask.shape) == 3:
             mask = mask[:, :, 0]
+        mask = mask.astype(float)
         mask[mask != 0] = 1
         return mask
 
-    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False):
+    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False, adjust_ilu=False):
         self.g = affine_transform(source, destination.shape[:2], offset=offset).astype(float) if not reshape \
             else source.astype(float)
         self.f = destination.astype(float)
         self.mask = Poisson_system.regu_mask(mask)
         self.map = Map(self.mask)
+        if adjust_ilu:
+            self.balance_illuminance()
 
         # create kernel
         self.kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
@@ -54,6 +57,11 @@ class Poisson_system:
                             ["Mdg", "masked gradients", "texture flattening"],
                             ["ilm", "illumination", "change local ilumination"]]
         self.cur_method = self.b = None
+
+    def balance_illuminance(self):
+        """Make the source image to have similar illuminance as destination area. """
+        ilu_diff= self.g[self.mask == 1].mean() - self.f[self.map.outbnd==1].mean()
+        self.f[self.map.outbnd == 1] += ilu_diff
 
     def get_Ab(self, method='dg', **kwargs):
         """

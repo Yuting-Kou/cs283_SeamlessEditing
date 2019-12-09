@@ -28,8 +28,11 @@ def resize_fix_ratio(img, width=None, height=None, inter=cv2.INTER_AREA):
 
 def blend(image, mask, x, alpha=0.3):
     ret = image.copy()
+    ret = ret*1.0/ret.max()
+    x = x.copy()
+    x = x*1.0/x.max()
     ret[mask != 0] = ret[mask != 0] * alpha + x[mask != 0] * (1 - alpha)
-    return ret.astype(np.uint8)
+    return ret.astype(float)
 
 
 def hidecode():
