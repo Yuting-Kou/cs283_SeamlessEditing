@@ -29,21 +29,29 @@ class Map:
 
 class Poisson_system:
 
+    @staticmethod
+    def regu_mask(mask):
+        """make sure mask is 2D and only 0 and 1"""
+        if len(mask.shape) == 3:
+            mask = mask[:, :, 0]
+        mask[mask != 0] = 1
+        return mask
+
     def __init__(self, source, destination, mask, offset=[0, 0], reshape=False):
         self.g = affine_transform(source, destination.shape[:2], offset=offset).astype(float) if not reshape \
             else source.astype(float)
         self.f = destination.astype(float)
-        self.mask = mask
-        self.map = Map(mask)
+        self.mask = Poisson_system.regu_mask(mask)
+        self.map = Map(self.mask)
 
         # create kernel
         self.kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
-        self.Np = correlate2d(np.ones(mask.shape), self.kernel, mode='same')
+        self.Np = correlate2d(np.ones(self.mask.shape), self.kernel, mode='same')
 
         self.A = self._get_A()
-        self.method_list = [["dg", "import_gradients", "basic seamless cloning"],
-                            ["dgf", "mixing_gradients", "transparent seamless cloning"],
-                            ["Mdg", "masked_gradients", "texture flattening"],
+        self.method_list = [["dg", "import gradients", "basic seamless cloning"],
+                            ["dgf", "mixing gradients", "transparent seamless cloning"],
+                            ["Mdg", "masked gradients", "texture flattening"],
                             ["ilm", "illumination", "change local ilumination"]]
         self.cur_method = self.b = None
 
@@ -59,16 +67,20 @@ class Poisson_system:
         """
         if (self.cur_method is None) or (method not in self.cur_method):
             if method in self.method_list[0]:
-                print('Import gradient', self.method_list[0])
+                self.cur_method = self.method_list[0]
+                print('Import gradient', self.cur_method)
                 v = self._laplacian(self.g)
             elif method in self.method_list[1]:
-                print('mixing gradient', self.method_list[1])
+                self.cur_method = self.method_list[1]
+                print('mixing gradient', self.cur_method)
                 v = self._mixing_gradients(**kwargs)
             elif method in self.method_list[2]:
-                print('masked gradient', self.method_list[2])
+                self.cur_method = self.method_list[2]
+                print('masked gradient', self.cur_method)
                 v = self._masked_gradients(**kwargs)
             elif method in self.method_list[3]:
-                print('illumination gradient', self.method_list[3])
+                self.cur_method = self.method_list[3]
+                print('illumination gradient', self.cur_method)
                 v = self._illumination_gradients(**kwargs)
             else:
                 raise ValueError(

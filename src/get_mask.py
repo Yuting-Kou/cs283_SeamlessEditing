@@ -1,5 +1,5 @@
 from os import path
-import matplotlib.pyplot as plt
+
 import cv2
 import numpy as np
 
@@ -7,15 +7,16 @@ from src.util import affine_transform, resize_fix_ratio, blend
 
 
 class Painter:
-    def __init__(self, g_impath, f_impath=None):
+    def __init__(self, g_impath, f_impath=None, winsize=600):
         self.g = cv2.imread(g_impath)
         self.f = cv2.imread(f_impath) if f_impath is not None else self.g.copy()
         self.g_name = g_impath.split('/')[-1]
         self.path = f_impath if f_impath is not None else g_impath
+        self.winsize = winsize
 
         # draw params
         self.size = 5
-        self.mask = np.zeros(self.g.shape[:2])
+        self.mask = np.zeros_like(self.g)
         self.g_reset = self.g.copy()
         self.mask_reset = self.mask.copy()
         self.draw = False
@@ -31,7 +32,7 @@ class Painter:
 
     def get_mask(self, maskname='mask.png'):
         self.draw_mask()
-        return self.shift_mask(maskname=maskname)
+        self.shift_mask(maskname=maskname)
 
     def _draw_mask_handler(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -62,7 +63,13 @@ class Painter:
                   S: save mask
                   Q: quit and unsaved
         """
-        cv2.namedWindow(self.window_name_draw, 0)
+        cv2.namedWindow(self.window_name_draw, cv2.WINDOW_NORMAL)
+        h, w = self.g.shape[:2]
+        if h > w:
+            dim = (self.winsize, int(self.winsize * 1.0 / h * w))
+        else:
+            dim = (int(self.winsize * 1.0 / w * h), self.winsize)
+        cv2.resizeWindow(self.window_name_draw, *dim)
         cv2.setMouseCallback(self.window_name_draw, self._draw_mask_handler)
 
         while 1:
@@ -107,7 +114,7 @@ class Painter:
         elif event == cv2.EVENT_LBUTTONUP:
             self.to_move = False
 
-    def _change(self):
+    def _change(self, value=None):
         # get value from trackbar
         value = cv2.getTrackbarPos("resize", self.window_name_move)
         print('resize', round(value / 10, 2))
@@ -130,14 +137,13 @@ class Painter:
                   Q: quit and unsaved
         maskname: name to store final mask.
         """
-        self.mask_reset = np.zeros(self.f.shape[:2])
+        self.mask_reset = np.zeros_like(self.f)
         # resize image if source is larger than destination
         h, w = self.f.shape[:2]
         ptsidx = np.where(self.mask != 0)
-        fxy = min(h * 1.0 / max(ptsidx[0]), w * 1.0 / max(ptsidx[1]))
+        fxy = min((h - 1) * 1.0 / max(ptsidx[0]), (w - 1) * 1.0 / max(ptsidx[1]))
         if fxy < 1:
-            print('resize')
-            width = int(w * fxy)
+            width = int(self.mask.shape[1] * fxy)
             self.mask = resize_fix_ratio(self.mask, width=width)
             self.g = resize_fix_ratio(self.g_reset, width=width)
             self.g = affine_transform(self.g, self.f.shape)
@@ -148,7 +154,13 @@ class Painter:
         self.mask_reset[ptsidx] = 255
         self.mask = self.mask_reset.copy()
 
-        cv2.namedWindow(self.window_name_move, 0)
+        cv2.namedWindow(self.window_name_move, cv2.WINDOW_NORMAL)
+        h, w = self.f.shape[:2]
+        if h > w:
+            dim = (self.winsize, int(self.winsize * 1.0 / h * w))
+        else:
+            dim = (int(self.winsize * 1.0 / w * h), self.winsize)
+        cv2.resizeWindow(self.window_name_move, *dim)
         cv2.setMouseCallback(self.window_name_move,
                              self._move_mask_handler)
         # create trackbar
@@ -173,16 +185,19 @@ class Painter:
         roi = self.mask
         cv2.imshow("Press any key to save the mask", roi)
         cv2.waitKey(0)
-        self.mask /= self.mask.max()
-        self.mask[self.mask != 0] = 1.0
+        # self.mask /= self.mask.max()
+        # self.mask[self.mask != 0] = 1.0
         if '.' not in maskname:
             maskname = maskname + '.png'
         new_mask_path = path.join(path.dirname(self.path),
                                   maskname)
+        print('save mask in' + new_mask_path)
+        cv2.imshow(self.window_name_move, self.mask)
         cv2.imwrite(new_mask_path, self.mask)
         new_g_path = path.join(path.dirname(self.path),
                                'new_' + self.g_name)
         cv2.imwrite(new_g_path, self.g)
+        print('save new g in' + new_g_path)
 
         # close all open windows
         cv2.destroyAllWindows()

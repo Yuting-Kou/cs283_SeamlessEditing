@@ -10,10 +10,10 @@ from src.poisson_system import Poisson_system
 from src.util import blend
 
 if __name__ == '__main__':
-    paths = '../test/'
-    destination = 'f.jpg'
-    source = 'g.jpg'
-    save = 'mask.png'
+    paths = '../data/'
+    destination = 'bjt.jpg'
+    source = 'kyt_duomo.jpg'
+    save = 'bjt_kyt.png'
     draw = True
 
     if draw:
