@@ -4,6 +4,8 @@ from scipy.ndimage import gaussian_filter
 from scipy.signal import correlate2d
 from scipy.sparse import lil_matrix
 
+from src.util import affine_transform
+
 
 class Map:
     def __init__(self, mask):
@@ -27,19 +29,9 @@ class Map:
 
 class Poisson_system:
 
-    @staticmethod
-    def _affine_transform(Iin, output_size, offset):
-        """
-        transform image (source img) into the output_size(destination) with offset
-        :param Iin: source img
-        :param output_size: output size
-        :param offset=[tx,ty], where output = [x+tx, y+ty]
-        """
-        M = np.float32([[1, 0, offset[0]], [0, 1, offset[1]]])
-        return cv2.warpAffine(Iin, M, (output_size[1], output_size[0]))
-
-    def __init__(self, source, destination, mask, offset=[0, 0]):
-        self.g = Poisson_system._affine_transform(source, destination.shape[:2], offset=offset).astype(float)
+    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False):
+        self.g = affine_transform(source, destination.shape[:2], offset=offset).astype(float) if not reshape \
+            else source.astype(float)
         self.f = destination.astype(float)
         self.mask = mask
         self.map = Map(mask)
@@ -67,12 +59,16 @@ class Poisson_system:
         """
         if (self.cur_method is None) or (method not in self.cur_method):
             if method in self.method_list[0]:
+                print('Import gradient', self.method_list[0])
                 v = self._laplacian(self.g)
             elif method in self.method_list[1]:
+                print('mixing gradient', self.method_list[1])
                 v = self._mixing_gradients(**kwargs)
             elif method in self.method_list[2]:
+                print('masked gradient', self.method_list[2])
                 v = self._masked_gradients(**kwargs)
             elif method in self.method_list[3]:
+                print('illumination gradient', self.method_list[3])
                 v = self._illumination_gradients(**kwargs)
             else:
                 raise ValueError(
