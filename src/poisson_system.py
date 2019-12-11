@@ -139,8 +139,7 @@ class Poisson_system:
     def _laplacian(self, x):
         v = np.zeros(x.shape)
         for i in range(3):
-            v[:, :, i] = self.Np * x[:, :, i] - \
-                         correlate2d(x[:, :, i], self.kernel, mode='same')
+            v[:, :, i] = self.Np * x[:, :, i] - correlate2d(x[:, :, i], self.kernel, mode='same')
         return v[self.mask == 1]
 
     def _mixing_gradients(self):
@@ -166,7 +165,7 @@ class Poisson_system:
                  place[idx[i][1]] + ', np.newaxis], g, 0)')
         return v[self.mask == 1]
 
-    def _illumination_gradients(self, beta = 0.2, alpha = 0.2):
+    def _illumination_gradients(self, beta=0.2, alpha=0.2):
         df = self._laplacian(self.g)
         v = np.zeros(df.shape)
         for i in range(3):
