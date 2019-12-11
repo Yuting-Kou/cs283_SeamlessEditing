@@ -142,7 +142,7 @@ class Poisson_system:
         return v[self.mask == 1]
 
     def _masked_gradients(self, low=100, high=300):
-        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), low, high)
+        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
         v = np.zeros(self.g.shape)
         place = [':-1, :', '1:, :', ':, :-1', ':, 1:']
         idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
