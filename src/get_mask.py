@@ -8,6 +8,11 @@ from src.util import affine_transform, resize_fix_ratio, blend
 
 class Painter:
     def __init__(self, g_impath, f_impath=None, winsize=600):
+        """
+
+        :param g_impath: path for source img.
+        :param f_impath: path for destination img.
+        """
         self.g = cv2.imread(g_impath)
         self.f = cv2.imread(f_impath) if f_impath is not None else self.g.copy()
         self.g_name = g_impath.split('/')[-1]

@@ -28,6 +28,10 @@ class Map:
 
 
 class Poisson_system:
+    method_list = [["dg", "import gradients", "basic seamless cloning"],
+                   ["dgf", "mixing gradients", "transparent seamless cloning"],
+                   ["Mdg", "masked gradients", "texture flattening"],
+                   ["ilm", "illumination", "change local ilumination"]]
 
     @staticmethod
     def regu_mask(mask):
@@ -38,30 +42,30 @@ class Poisson_system:
         mask[mask != 0] = 1
         return mask
 
-    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False, adjust_ilu=False):
+    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False, adjust_ilu=False, alpha=0.5):
         self.g = affine_transform(source, destination.shape[:2], offset=offset).astype(float) if not reshape \
             else source.astype(float)
         self.f = destination.astype(float)
+        self.f_reset = self.f.copy()
         self.mask = Poisson_system.regu_mask(mask)
         self.map = Map(self.mask)
-        if adjust_ilu:
-            self.balance_illuminance()
 
         # create kernel
         self.kernel = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.uint8)
         self.Np = correlate2d(np.ones(self.mask.shape), self.kernel, mode='same')
 
+        # balance illuminance
+        if adjust_ilu:
+            self.balance_illuminance(alpha=alpha)
+
         self.A = self._get_A()
-        self.method_list = [["dg", "import gradients", "basic seamless cloning"],
-                            ["dgf", "mixing gradients", "transparent seamless cloning"],
-                            ["Mdg", "masked gradients", "texture flattening"],
-                            ["ilm", "illumination", "change local ilumination"]]
         self.cur_method = self.b = None
 
-    def balance_illuminance(self):
+    def balance_illuminance(self, alpha=0.5):
         """Make the source image to have similar illuminance as destination area. """
-        ilu_diff= self.g[self.mask == 1].mean() - self.f[self.map.outbnd==1].mean()
-        self.f[self.map.outbnd == 1] += ilu_diff
+        near_bnd = cv2.dilate(self.map.bnd.astype(np.uint8), kernel=self.kernel, iterations=1)
+        ilu_diff = self.g[self.mask == 1].mean() - self.f[near_bnd == 1].mean()
+        self.f[near_bnd == 1] += alpha * ilu_diff
 
     def get_Ab(self, method='dg', **kwargs):
         """
@@ -74,20 +78,20 @@ class Poisson_system:
         :return: the discrete of the guidance field v under different methods.
         """
         if (self.cur_method is None) or (method not in self.cur_method):
-            if method in self.method_list[0]:
-                self.cur_method = self.method_list[0]
+            if method in Poisson_system.method_list[0]:
+                self.cur_method = Poisson_system.method_list[0]
                 print('Import gradient', self.cur_method)
                 v = self._laplacian(self.g)
-            elif method in self.method_list[1]:
-                self.cur_method = self.method_list[1]
+            elif method in Poisson_system.method_list[1]:
+                self.cur_method = Poisson_system.method_list[1]
                 print('mixing gradient', self.cur_method)
                 v = self._mixing_gradients(**kwargs)
-            elif method in self.method_list[2]:
-                self.cur_method = self.method_list[2]
+            elif method in Poisson_system.method_list[2]:
+                self.cur_method = Poisson_system.method_list[2]
                 print('masked gradient', self.cur_method)
                 v = self._masked_gradients(**kwargs)
-            elif method in self.method_list[3]:
-                self.cur_method = self.method_list[3]
+            elif method in Poisson_system.method_list[3]:
+                self.cur_method = Poisson_system.method_list[3]
                 print('illumination gradient', self.cur_method)
                 v = self._illumination_gradients(**kwargs)
             else:
@@ -137,8 +141,8 @@ class Poisson_system:
             v += np.where(abs(f) > abs(g), f, g)
         return v[self.mask == 1]
 
-    def _masked_gradients(self):
-        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), 100, 300)
+    def _masked_gradients(self, low=100, high=300):
+        edge = cv2.Canny(cv2.cvtColor(self.g.astype(np.uint8), cv2.COLOR_RGB2GRAY), low, high)
         v = np.zeros(self.g.shape)
         place = [':-1, :', '1:, :', ':, :-1', ':, 1:']
         idx = [(0, 1), (2, 3), (1, 0), (3, 2)]
@@ -163,7 +167,7 @@ class Poisson_system:
         return v
 
     def combine(self, x):
-        res = self.f.copy()
+        res = self.f_reset.copy()
         res[self.mask == 1] = x
         res[res > 255] = 255
         res[res < 0] = 0
