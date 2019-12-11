@@ -72,8 +72,8 @@ class Poisson_system:
             raise ValueError(
                 "Not defined modification methods. Please select from {}".format(Poisson_system.modify_method_list))
 
-    def _illu_avg_color(self, near_bnd, **args):
-        self.f[near_bnd == 1] = (self.f[near_bnd == 1] + self.g[near_bnd == 1]) / 2
+    def _illu_avg_color(self, near_bnd, alpha = 0.5):
+        self.f[near_bnd == 1] = alpha * self.f[near_bnd == 1] + (1-alpha) * self.g[near_bnd == 1]
 
     def _illu_balance_illumination(self, near_bnd, alpha=0.5):
         """Make the source image to have similar illumination as destination area. """
