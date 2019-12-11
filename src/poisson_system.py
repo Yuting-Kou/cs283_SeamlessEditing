@@ -43,7 +43,7 @@ class Poisson_system:
         mask[mask != 0] = 1
         return mask
 
-    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False, adjust_method=None, **args):
+    def __init__(self, source, destination, mask, offset=[0, 0], reshape=False, adj_method=None, **args):
         self.g = affine_transform(source, destination.shape[:2], offset=offset).astype(float) if not reshape \
             else source.astype(float)
         self.f = destination.astype(float)
@@ -56,8 +56,8 @@ class Poisson_system:
         self.Np = correlate2d(np.ones(self.mask.shape), self.kernel, mode='same')
 
         # Solve Limitation
-        if adjust_method is not None:
-            self.modification(method=adjust_method, **args)
+        if adj_method is not None:
+            self.modification(method=adj_method, **args)
 
         self.A = self._get_A()
         self.cur_method = self.b = None
@@ -65,17 +65,17 @@ class Poisson_system:
     def modification(self, method='avg_color', **args):
         near_bnd = cv2.dilate(self.map.bnd.astype(np.uint8), kernel=self.kernel, iterations=1)
         if method == 'avg_color':
-            self.illu_avg_color(near_bnd, **args)
+            self._illu_avg_color(near_bnd, **args)
         elif method == 'balance_illuminance':
-            self.illu_balance_illuminance(near_bnd, **args)
+            self._illu_balance_illuminance(near_bnd, **args)
         else:
             raise ValueError(
                 "Not defined modification methods. Please select from {}".format(Poisson_system.modify_method_list))
 
-    def illu_avg_color(self, near_bnd, **args):
+    def _illu_avg_color(self, near_bnd, **args):
         self.f[near_bnd == 1] = (self.f[near_bnd == 1] + self.g[near_bnd == 1]) / 2
 
-    def illu_balance_illuminance(self, near_bnd, alpha=0.5):
+    def _illu_balance_illuminance(self, near_bnd, alpha=0.5):
         """Make the source image to have similar illuminance as destination area. """
         ilu_diff = self.g[self.mask == 1].mean() - self.f[near_bnd == 1].mean()
         self.f[near_bnd == 1] += alpha * ilu_diff
