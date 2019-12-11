@@ -31,8 +31,8 @@ class Poisson_system:
     method_list = [["dg", "import gradients", "basic seamless cloning"],
                    ["dgf", "mixing gradients", "transparent seamless cloning"],
                    ["Mdg", "masked gradients", "texture flattening"],
-                   ["ilm", "illumination", "change local ilumination"]]
-    modify_method_list = ['avg_color', 'balance_illuminance']
+                   ["ilm", "illumination", "change local illumination"]]
+    modify_method_list = ['avg_color', 'balance_illumination']
 
     @staticmethod
     def regu_mask(mask):
@@ -66,8 +66,8 @@ class Poisson_system:
         near_bnd = cv2.dilate(self.map.bnd.astype(np.uint8), kernel=self.kernel, iterations=1)
         if method == 'avg_color':
             self._illu_avg_color(near_bnd, **args)
-        elif method == 'balance_illuminance':
-            self._illu_balance_illuminance(near_bnd, **args)
+        elif method == 'balance_illumination':
+            self._illu_balance_illumination(near_bnd, **args)
         else:
             raise ValueError(
                 "Not defined modification methods. Please select from {}".format(Poisson_system.modify_method_list))
@@ -75,8 +75,8 @@ class Poisson_system:
     def _illu_avg_color(self, near_bnd, **args):
         self.f[near_bnd == 1] = (self.f[near_bnd == 1] + self.g[near_bnd == 1]) / 2
 
-    def _illu_balance_illuminance(self, near_bnd, alpha=0.5):
-        """Make the source image to have similar illuminance as destination area. """
+    def _illu_balance_illumination(self, near_bnd, alpha=0.5):
+        """Make the source image to have similar illumination as destination area. """
         ilu_diff = self.g[self.mask == 1].mean() - self.f[near_bnd == 1].mean()
         self.f[near_bnd == 1] += alpha * ilu_diff
 
