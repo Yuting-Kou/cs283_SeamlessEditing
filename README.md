@@ -24,3 +24,22 @@ Poisson Image Editing is a framework for seamless image editing and yields a var
 ## User Guidance
 
 For a user guide on how to use our code and replicate the results in a PDF report using code, see  [Example.ipynb](Example.ipynb).
+## Folder Structure
+
+
+    .
+    ├── documents               # Documentation files (paper inside)
+    ├── data                    # Data files 
+    │   ├── paper_example       # Example images to replicate paper example
+    │   |   ├── results         # Result images for successful seamless editing
+    │   │   └── xxx.jpg         # Images for replicate paper example
+    │   ├── results             # Result images for testing limitations
+    │   └── xxx.jpg             # Images for testing limitations
+    ├── old                     # Disgard old version of the code
+    ├── src                     # Source code for Poisson Image Editing
+    │   ├── get_mask.py         # Draw mask function
+    │   ├── poisson_system.py   # Build Poisson equation
+    │   └── poisson_solver.py   # Solve Poisson equation
+    ├── Example.ipynb           # Code usage guide and Replicate results in paper
+    └── README.md
+
